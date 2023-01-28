@@ -50,7 +50,10 @@ dictionary mapInfo;
 string currentMapUid;
 void step() {
 	CTrackMania@ app = cast<CTrackMania>(GetApp());
-	if (app.CurrentPlayground is null || app.RootMap is null || app.Editor !is null) return;
+	if (app.CurrentPlayground is null || app.RootMap is null || app.Editor !is null) {
+		mapInfo.DeleteAll();
+		return;
+	}
 	CGameCtnChallenge@ map = app.RootMap;
 	string mapUid = map.MapInfo.MapUid;
 
@@ -64,6 +67,7 @@ void step() {
 }
 
 void onNewMap(CGameCtnChallenge@ map) {
+	mapInfo.DeleteAll();
 	getNadeoMapData(map.MapInfo.MapUid);
 	mapInfo.Set("Map UID", map.MapInfo.MapUid);
 	mapInfo.Set("Name", string(map.MapInfo.Name));
