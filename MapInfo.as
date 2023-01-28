@@ -55,11 +55,17 @@ void step() {
 	string mapUid = map.MapInfo.MapUid;
 
 	if(mapUid != currentMapUid) {
-		onNewMap(mapUid);
+		onNewMap(map);
 		currentMapUid = mapUid;
 	}
 
-	mapInfo.Set("Map UID", mapUid);
+
+
+}
+
+void onNewMap(CGameCtnChallenge@ map) {
+	getNadeoMapData(map.MapInfo.MapUid);
+	mapInfo.Set("Map UID", map.MapInfo.MapUid);
 	mapInfo.Set("Name", string(map.MapInfo.Name));
 	mapInfo.Set("Author nick", string(map.MapInfo.AuthorNickName));
 	mapInfo.Set("Author login", map.MapInfo.AuthorLogin);
@@ -68,10 +74,12 @@ void step() {
 		mapInfo.Set("Uploaded", Time::FormatString("%c", nadeoData["uploadTimestamp"]));
 	}
 
-}
-
-void onNewMap(const string &in uid) {
-	getNadeoMapData(uid);
+	if (totdTracks.Exists(map.MapInfo.MapUid)) {
+		mapInfo.Set("TOTD on", Time::FormatString("%c", uint64(totdTracks[map.MapInfo.MapUid])));
+	} else {
+		mapInfo.Set("TOTD on", "n/a");
+	}
+	
 }
 
 bool isOnNadeoServices = false;
