@@ -239,7 +239,7 @@ class MapInfo_Data {
         // so probs best to check that (no string operations).
         auto cmap = GetApp().Network.ClientManiaAppPlayground;
         if (cmap is null) return false;
-        for (uint i = 2; i < Math::Min(8, cmap.UILayers.Length); i++) {
+        for (uint i = 2; i < uint(Math::Min(8, cmap.UILayers.Length)); i++) {
             auto layer = cmap.UILayers[i];
             if (layer !is null && layer.Type == CGameUILayer::EUILayerType::ScoresTable) {
                 return layer.LocalPage !is null && layer.LocalPage.MainFrame !is null && layer.LocalPage.MainFrame.Visible;
@@ -577,11 +577,11 @@ class MapInfo_UI : MapInfo_Data {
 
         if (ThumbnailTexture !is null) {
             vec2 size = vec2(thumbnailHeight, thumbnailHeight);
-            vec2 tl = pos + vec2(fullWidth, 0) / 2.0 - vec2(size.x / 2.0, 0);
+            vec2 _tl = pos + vec2(fullWidth, 0) / 2.0 - vec2(size.x / 2.0, 0);
             nvg::ClosePath();
             nvg::BeginPath();
-            nvg::Rect(tl, size);
-            nvg::FillPaint(nvg::TexturePattern(tl, size, 0.0, ThumbnailTexture, 1.0));
+            nvg::Rect(_tl, size);
+            nvg::FillPaint(nvg::TexturePattern(_tl, size, 0.0, ThumbnailTexture, 1.0));
             nvg::Fill();
         }
 

@@ -239,10 +239,6 @@ class Color {
 
     string get_HexTri() {
         return rgbToHexTri(this.rgb);
-        return ""
-            + ToSingleHexCol(v.x)
-            + ToSingleHexCol(v.y)
-            + ToSingleHexCol(v.z);
     }
 
     // void AsLAB() {
