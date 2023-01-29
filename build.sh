@@ -23,7 +23,7 @@ esac
 
 _colortext16 yellow "🚩 Build mode: $_build_mode"
 
-pluginSources=( './' )
+pluginSources=( 'src' )
 
 for pluginSrc in ${pluginSources[@]}; do
   # if we don't have `dos2unix` below then we need to add `\r` to the `tr -d`
@@ -62,8 +62,8 @@ for pluginSrc in ${pluginSources[@]}; do
   PLUGIN_RELEASE_LOC=$PLUGINS_DIR/$RELEASE_NAME
 
   function buildPlugin {
-    # 7z a ./$BUILD_NAME ./fonts ./$pluginSrc/* ./LICENSE ./README.md
-    7z a ./$BUILD_NAME ./$pluginSrc/*.as ./LICENSE ./README.md
+    7z a ./$BUILD_NAME ./fonts ./$pluginSrc/* ./LICENSE ./README.md
+    # 7z a ./$BUILD_NAME ./$pluginSrc/*.as ./$pluginSrc/info.toml ./LICENSE ./README.md
 
     cp -v $BUILD_NAME $RELEASE_NAME
 
@@ -79,7 +79,7 @@ for pluginSrc in ${pluginSources[@]}; do
       _build_dest=$PLUGIN_DEV_LOC
       mkdir -p $_build_dest/
       rm -vr $_build_dest/* || true
-      cp -LR -v ./$pluginSrc/*.as $_build_dest/
+      cp -LR -v ./$pluginSrc/* $_build_dest/
       # cp -LR -v ./fonts $_build_dest/fonts
       # cp -LR -v ./fonts/* $_build_dest/fonts/
       # cp -LR -v ./external/* $_build_dest/
