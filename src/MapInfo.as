@@ -508,6 +508,8 @@ class MapInfo_UI : MapInfo_Data {
             ;
         if (hoverAnim.Update(!closed && rawHover, slideFrameProgress)) {
             DrawHoveredInterface(rect, fs, xPad, textHOffset, gap);
+        } else {
+            lastMapInfoSize = vec2();
         }
     }
 
@@ -572,7 +574,23 @@ class MapInfo_UI : MapInfo_Data {
         pos = DrawDataLabels(pos, yStep, col2X, fs, "Worst Time", WorstTimeStr);
         pos = DrawDataLabels(pos, yStep, col2X, fs, "TMX", TrackIDStr);
 
-        // we added this earlier for convenience
+        /** ! to add a button, you need to
+         * increment pos by the relevant height (it's the next position drawn at).
+         * If you don't use the same height as prior rows, add this height to the calculation of thumbnailFrameHeight. (you might need to add yStep otherwise).
+         * use IsWithin to test button bounds for hover etc. probs good to make a button class that is a property of this class.
+         * note: I've written an nvg button implementation here: https://github.com/XertroV/tm-editor-ui-toolbox/blob/master/src/NvgButton.as
+         *       (also some related files). mb is useful.
+         *       if you use that, i'd instantiate them in GetMapTMXStatus, and leave some handles as null otherwise.
+         *       or do some overload trickery to put all that logic in the UI class, which is neater.
+         * WRT buttons, my thoughts so far were to reduce the font size a bit and draw the button within the existing row heights.
+         * (both for programming easy-ness and to keep the UI consistent)
+         */
+
+        // button impl here?
+
+        /* Thumbnail*/
+
+        // we added this earlier for indent convenience, subtract now to make maths work
         pos.x -= xPad;
 
         if (ThumbnailTexture !is null) {
