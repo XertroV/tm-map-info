@@ -219,10 +219,11 @@ class MapInfo_Data {
         WorstTimeStr = Time::Format(WorstTime);
 
         LoadedNbPlayers = true;
-        trace('MapInfo_Data loaded nb players');
+        trace('MapInfo_Data loaded nb players: ' + NbPlayersStr);
 
-        float refreshInSeconds = resp.Get('refresh_in', 150.0);
-        trace('Refreshing nb players in: ' + refreshInSeconds);
+        // add a random time to let the server have some time to cache the next value
+        float refreshInSeconds = resp.Get('refresh_in', 150.0) + Math::Rand(0.0, 15.0);
+        trace('Refreshing nb players in: (s) ' + refreshInSeconds);
         sleep(int(refreshInSeconds * 1000.0));
         startnew(CoroutineFunc(this.GetMapInfoFromMapMonitorAPI));
         if (UploadedToNadeo == 0) { // check again in case of upload
@@ -492,9 +493,6 @@ class MapInfo_UI : MapInfo_Data {
 
         nvg::BeginPath();
         DrawBgRect(rect.xy, rect.zw);
-        // nvg::Rect(rect.xy, rect.zw);
-        // nvg::FillColor(vec4(0, 0, 0, .8));
-        // nvg::Fill();
 
         nvg::FillColor(vec4(1.0));
         nvg::Text(rect.xy + rect.zw * vec2(.5, .55), mainLabel);
@@ -512,34 +510,6 @@ class MapInfo_UI : MapInfo_Data {
             DrawHoveredInterface(rect, fs, xPad, textHOffset, gap);
         }
     }
-
-    // in ms
-    // float animDuration = 250.0;
-    // bool lastHover = false;
-    // float t_hover = 0.0;
-    // float hoverSlide = 0.0;
-    // uint lastHoverChange = 0;
-    // uint lastHoverCheck = 0;
-    // bool TrackHovering(bool hoverRaw) {
-    //     if (lastHoverChange == 0) lastHoverChange = Time::Now;
-    //     if (lastHoverCheck == 0) lastHoverCheck = Time::Now;
-
-    //     float delta = float(int(Time::Now) - int(lastHoverCheck)) / animDuration;
-    //     lastHoverCheck = Time::Now;
-
-    //     float sign = hoverRaw ? 1.0 : -1.0;
-    //     t_hover = Math::Clamp(t_hover + sign * delta, 0.0, 1.0);
-    //     // float t_hover = Math::Clamp(float(int(Time::Now) - int(lastHoverChange)) / animDuration, 0.0, 1.0);
-    //     // if (lastHover) t_hover = 1.0 - t_hover;
-    //     if (lastHover != hoverRaw) {
-    //         lastHover = hoverRaw;
-    //         lastHoverChange = Time::Now;
-    //     }
-    //     hoverSlide = -(t_hover * (t_hover - 2.));
-    //     // hoverSlide = 1.0;
-    //     hoverSlide = Math::Min(slideFrameProgress, hoverSlide);
-    //     return hoverSlide > 0.;
-    // }
 
     float HoverInterfaceScale = 0.5357;
     float HI_MaxCol1 = 64.0;
@@ -585,6 +555,7 @@ class MapInfo_UI : MapInfo_Data {
         float alpha = .9;
         nvg::FillColor(vec4(1, 1, 1, alpha));
 
+        // indent by xPad
         vec2 pos = tl + vec2(xPad, textHOffset + xPad * 0.5);
 
         // ! update nbRows if you add more DrawDataLabels
@@ -601,6 +572,7 @@ class MapInfo_UI : MapInfo_Data {
         pos = DrawDataLabels(pos, yStep, col2X, fs, "Worst Time", WorstTimeStr);
         pos = DrawDataLabels(pos, yStep, col2X, fs, "TMX", TrackIDStr);
 
+        // we added this earlier for convenience
         pos.x -= xPad;
 
         if (ThumbnailTexture !is null) {
@@ -670,92 +642,6 @@ class MapInfo_UI : MapInfo_Data {
     }
 }
 
-
-
-/**
- * Parse a color string and provide a draw function so that we can draw colored text.
- */
-class NvgText {
-    string[]@ parts;
-    vec3[] cols;
-
-    NvgText(const string &in coloredText) {
-        auto preText = ColoredString(StripNonColorFormatCodes(coloredText));
-        @parts = preText.Split("\\$");
-        uint startAt = 0;
-        if (!preText.StartsWith("\\$")) {
-            startAt = 1;
-            cols.InsertLast(vec3(-1, -1, -1));
-        }
-        for (uint i = startAt; i < parts.Length; i++) {
-            if (parts[i].Length == 0) {
-                cols.InsertLast(vec3(-1, -1, -1));
-                continue;
-            }
-            if (parts[i].SubStr(0, 1).ToLower() == "z") {
-                parts[i] = parts[i].SubStr(1);
-                cols.InsertLast(vec3(-1, -1, -1));
-                continue;
-            }
-            auto hex = parts[i].SubStr(0, 3);
-            parts[i] = parts[i].SubStr(3);
-            cols.InsertLast(hexTriToRgb(hex));
-        }
-    }
-
-    void Draw(vec2 pos, vec3 defaultCol, float fs, float alpha = 1.0) {
-        float xOff = 0;
-        for (uint i = 0; i < parts.Length; i++) {
-            auto col = cols[i];
-            if (col.x < 0) col = defaultCol;
-            nvg::FillColor(vec4(col.x, col.y, col.z, alpha));
-            auto xy = nvg::TextBounds(parts[i]);
-            nvg::Text(pos + vec2(xOff, 0), parts[i]);
-            xOff += Math::Max(0.0, xy.x - fs / 7.0);
-        }
-        nvg::FillColor(vec4(defaultCol.x, defaultCol.y, defaultCol.z, alpha));
-    }
-}
-
-
-bool IsCharInt(int char) {
-    return 48 <= char && char <= 57;
-}
-
-bool IsCharInAToF(int char) {
-    return (97 <= char && char <= 102) /* lower case */
-        || (65 <= char && char <= 70); /* upper case */
-}
-
-bool IsCharHex(int char) {
-    return IsCharInt(char) || IsCharInAToF(char);
-}
-
-uint8 HexCharToInt(int char) {
-    if (IsCharInt(char)) {
-        return char - 48;
-    }
-    if (IsCharInAToF(char)) {
-        int v = char - 65 + 10;  // A = 65 ascii
-        if (v < 16) return v;
-        return v - (97 - 65);    // a = 97 ascii
-    }
-    throw("HexCharToInt got char with code " + char + " but that isn't 0-9 or a-f or A-F in ascii.");
-    return 0;
-}
-
-vec3 hexTriToRgb(const string &in hexTri) {
-    if (hexTri.Length != 3) { throw ("hextri must have 3 characters. bad input: " + hexTri); }
-    try {
-        float r = HexCharToInt(hexTri[0]);
-        float g = HexCharToInt(hexTri[1]);
-        float b = HexCharToInt(hexTri[2]);
-        return vec3(r, g, b) / 15.;
-    } catch {
-        throw("Exception while processing hexTri (" + hexTri + "): " + getExceptionInfo());
-    }
-    return vec3();
-}
 
 
 // class MurderChairsUI {
