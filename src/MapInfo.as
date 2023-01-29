@@ -116,6 +116,9 @@ class MapInfo_Data {
     uint BronzeScore = 0;
     string DateStr = "";
 
+    // -1 for loading, 0 for no, 1 for yes
+    int UploadedToNadeo = -1;
+
     uint NbPlayers = LoadingNbPlayersFlag;
     uint WorstTime = 0;
     string NbPlayersStr = "-";
@@ -136,10 +139,18 @@ class MapInfo_Data {
         uid = map.EdChallengeId;
         SetName(map.MapName);
         author = map.AuthorNickName;
+
+        AuthorDisplayName = map.MapInfo.AuthorNickName;
+
+        StartInitializationCoros();
+    }
+
+    void StartInitializationCoros() {
         startnew(CoroutineFunc(this.GetMapInfoFromCoreAPI));
         startnew(CoroutineFunc(this.GetMapInfoFromMapMonitorAPI));
         startnew(CoroutineFunc(this.GetMapTOTDStatus));
         startnew(CoroutineFunc(this.MonitorRecordsVisibility));
+        startnew(CoroutineFunc(this.MonitorUIVisibility));
     }
 
     void SetName(const string &in name) {
@@ -152,7 +163,13 @@ class MapInfo_Data {
     void GetMapInfoFromCoreAPI() {
         // This should usually be near-instant b/c the game has probably already loaded this.
         auto info = Core::GetMapFromUid(uid);
-        if (info is null) return;
+        if (info is null) {
+            UploadedToNadeo = 0;
+            DateStr = "Never";
+            return;
+        }
+        UploadedToNadeo = 1;
+
         AuthorAccountId = info.AuthorAccountId;
         AuthorDisplayName = info.AuthorDisplayName;
         AuthorWebServicesUserId = info.AuthorWebServicesUserId;
@@ -188,6 +205,9 @@ class MapInfo_Data {
         trace('Refreshing nb players in: ' + refreshInSeconds);
         sleep(int(refreshInSeconds * 1000.0));
         startnew(CoroutineFunc(this.GetMapInfoFromMapMonitorAPI));
+        if (UploadedToNadeo == 0) { // check again in case of upload
+            startnew(CoroutineFunc(this.GetMapInfoFromCoreAPI));
+        }
     }
 
     void GetMapTOTDStatus() {
@@ -201,10 +221,19 @@ class MapInfo_Data {
         LoadedWasTOTD = true;
     }
 
+    bool IsGoodUISequence(CGamePlaygroundUIConfig::EUISequence uiSeq) {
+        return uiSeq == CGamePlaygroundUIConfig::EUISequence::Playing
+            || uiSeq == CGamePlaygroundUIConfig::EUISequence::Finish
+            || uiSeq == CGamePlaygroundUIConfig::EUISequence::EndRound
+            ;
+    }
+
     private uint lastNbUilayers = 0;
     bool IsUIPopulated() {
         auto cmap = GetApp().Network.ClientManiaAppPlayground;
-        if (cmap is null) return false;
+        auto cp = GetApp().CurrentPlayground;
+        if (cmap is null || cp is null || cp.UIConfigs.Length == 0) return false;
+        if (!IsGoodUISequence(cmap.UI.UISequence)) return false;
         auto nbUiLayers = cmap.UILayers.Length;
         // if the number of UI layers decreases it's probably due to a recovery restart, so we don't want to act on old references
         if (nbUiLayers <= 2 || nbUiLayers < lastNbUilayers) {
@@ -215,12 +244,34 @@ class MapInfo_Data {
         return true;
     }
 
+    bool ScoreTableVisible() {
+        // frame-scorestable-layer is the frame that shows scoreboard
+        // but there's a ui layer with type ScoresTable that is called UIModule_Race_ScoresTable_Visibility
+        // so probs best to check that (no string operations).
+        auto cmap = GetApp().Network.ClientManiaAppPlayground;
+        if (cmap is null) return false;
+        for (uint i = 2; i < Math::Min(8, cmap.UILayers.Length); i++) {
+            auto layer = cmap.UILayers[i];
+            if (layer !is null && layer.Type == CGameUILayer::EUILayerType::ScoresTable) {
+                return layer.LocalPage !is null && layer.LocalPage.MainFrame !is null && layer.LocalPage.MainFrame.Visible;
+            }
+        }
+        return false;
+    }
+
+    bool SettingsOpen() {
+        auto vp = GetApp().Viewport;
+        if (vp.Overlays.Length < 11) return false;
+        // 5 normally, report/key have 15 and 24; menu open has like 390
+        return vp.Overlays[10].m_CorpusVisibles.Length > 10;
+    }
+
     bool ShouldDrawUI {
         get {
-            return UI::IsGameUIVisible() && isRecordsElementVisisble;
+            return UI::IsGameUIVisible() && isRecordsElementVisible && !ScoreTableVisible() && !SettingsOpen();
         }
     }
-    private bool isRecordsElementVisisble = false;
+    private bool isRecordsElementVisible = false;
     private void MonitorRecordsVisibility() {
         trace('test populated');
         while (!IsUIPopulated()) yield();
@@ -229,16 +280,31 @@ class MapInfo_Data {
         trace('is safe');
         // once we detect things have started to load, wait another second
         trace('sleep');
-        sleep(1000);
+        for (uint i = 0; i < 10; i++) yield();
         trace('assert safe');
-        if (!IsSafeToCheckUI()) return; // throw("Should only happen if we exit the map super fast.");
+        while (!IsSafeToCheckUI()) yield(); // throw("Should only happen if we exit the map super fast.");
         trace('find UI elements');
-        FindUIElements();
+        while (IsSafeToCheckUI() && !FindUIElements()) {
+            sleep(100);
+        }
         trace('done checking ui. found: ' + lastRecordsLayerIndex);
         while (true) {
             yield();
-            if (!IsSafeToCheckUI()) break;
-            isRecordsElementVisisble = IsRecordElementVisible();
+            if (GetApp().RootMap is null || GetApp().RootMap.EdChallengeId != uid) break;
+            isRecordsElementVisible = IsSafeToCheckUI() && IsRecordElementVisible();
+        }
+        trace('exited');
+    }
+
+    protected bool _GameUIVisible = false;
+    private void MonitorUIVisibility() {
+        while (true) {
+            yield();
+            yield();
+            yield();
+            yield();
+            yield();
+            _GameUIVisible = UI::IsGameUIVisible();
         }
     }
 
@@ -266,7 +332,7 @@ class MapInfo_Data {
     }
 
     private uint lastRecordsLayerIndex = 14;
-    private void FindUIElements() {
+    private bool FindUIElements() {
         auto app = cast<CTrackMania>(GetApp());
         auto cmap = app.Network.ClientManiaAppPlayground;
         if (cmap is null) throw('should never be null');
@@ -286,8 +352,7 @@ class MapInfo_Data {
                 }
             }
         }
-        if (!foundRecordsLayer)
-            throw('unexpected: couldnt find records layer');
+        return foundRecordsLayer;
     }
 
     bool IsUILayerRecordLayer(CGameUILayer@ layer) {
@@ -346,15 +411,21 @@ class MapInfo_UI : MapInfo_Data {
     AnimMgr@ hoverAnim = AnimMgr();
 
     void Draw() {
-        if (!UI::IsGameUIVisible() || !ShouldDrawUI) {
-            mainAnim.SetAt(0.0);
-            hoverAnim.SetAt(0.0);
-            // lastHoverChange = Time::Now;
-            lastMapInfoSize = vec2();
-            return;
-        }
         if (!LoadedNbPlayers && Time::Now - LoadingStartedAt < 5000) return;
-        mainAnim.Update(true, slideFrameProgress);
+        auto cmap = GetApp().Network.ClientManiaAppPlayground;
+        auto pgcsa = GetApp().Network.PlaygroundClientScriptAPI;
+        bool closed = !S_ShowMapInfo
+            || !_GameUIVisible
+            || !ShouldDrawUI
+            || cmap is null || !IsGoodUISequence(cmap.UI.UISequence)
+            || pgcsa is null || pgcsa.IsInGameMenuDisplayed
+            // cost about 0.12 ms!
+            // || !UI::IsGameUIVisible()
+            ;
+        if (closed) {
+            lastMapInfoSize = vec2();
+        }
+        if (!mainAnim.Update(!closed, slideFrameProgress)) return;
 
         auto rect = UpdateBounds();
 
@@ -400,7 +471,7 @@ class MapInfo_UI : MapInfo_Data {
         bool rawHover = IsWithin(g_MouseCoords, rect.xy, rect.zw + vec2(gap, 0))
             || IsWithin(g_MouseCoords, rect.xy + vec2(rect.z + gap, 0), lastMapInfoSize);
             ;
-        if (hoverAnim.Update(rawHover, slideFrameProgress)) {
+        if (hoverAnim.Update(!closed && rawHover, slideFrameProgress)) {
             DrawHoveredInterface(rect, fs, xPad, textHOffset, gap);
         }
     }

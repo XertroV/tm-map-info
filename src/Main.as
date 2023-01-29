@@ -13,7 +13,7 @@ void Update(float dt) {
 }
 
 void Render() {
-    DrawMapInfoUI();
+    // DrawMapInfoUI();
     if (g_MapInfo !is null) {
         g_MapInfo.Draw();
         // g_MapInfo.Draw_DebugUI();
@@ -26,11 +26,6 @@ void RenderMenu() {
     if(UI::MenuItem(MenuLabel, "", S_ShowMapInfo)) {
         S_ShowMapInfo = !S_ShowMapInfo;
     }
-}
-
-void OnSettingsChanged() {
-    // no reason to call this again, yet
-    // init();
 }
 
 const string FmtTimestamp(uint64 timestamp) {
