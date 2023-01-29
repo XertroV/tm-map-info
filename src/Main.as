@@ -13,7 +13,6 @@ void Update(float dt) {
 }
 
 void Render() {
-    // DrawMapInfoUI();
     if (g_MapInfo !is null) {
         g_MapInfo.Draw();
         // g_MapInfo.Draw_DebugUI();

@@ -1,30 +1,3 @@
-
-void DrawMapInfoUI() {
-    if (!S_ShowMapInfo) return;
-    if (GetApp().CurrentPlayground is null || GetApp().RootMap is null || GetApp().Editor !is null) return;
-
-    // @todo: maybe do this with nvg instead?
-    if (UI::Begin("\\$8f0" + Icons::Map + "\\$z Map Info", UI::WindowFlags::AlwaysAutoResize)) {
-
-        // shitty debug view for now
-        UI::BeginTable("mapInfoDebug", 2);
-
-        string[] keys = mapInfo.GetKeys();
-        for (uint i = 0; i < keys.Length; i++) {
-            UI::TableNextRow();
-            UI::TableNextColumn();
-            UI::Text(keys[i]);
-            UI::TableNextColumn();
-            UI::Text(string(mapInfo[keys[i]]));
-        }
-
-        UI::EndTable();
-    }
-    UI::End();
-}
-
-
-
 string currentMapUid;
 dictionary mapInfo;
 MapInfo_UI@ g_MapInfo = null;
