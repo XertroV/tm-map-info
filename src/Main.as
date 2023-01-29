@@ -1,7 +1,9 @@
 // int g_NvgFont = nvg::LoadFont("fonts/Montserrat-BoldItalic.ttf", true, true);
 int g_NvgFont = nvg::LoadFont("fonts/Montserrat-SemiBoldItalic.ttf", true, true);
+UI::Font@ g_ImguiFont;
 
 void Main() {
+    if (S_ShowLoadingScreenInfo) @g_ImguiFont = UI::LoadFont("fonts/Montserrat-SemiBoldItalic.ttf", 40.f);
     startnew(ClearTaskCoro);
     startnew(TOTD::LoadTOTDs);
 }
@@ -16,6 +18,12 @@ void Render() {
     if (g_MapInfo !is null) {
         g_MapInfo.Draw();
         // g_MapInfo.Draw_DebugUI();
+
+        auto loadProgress = GetApp().LoadProgress;
+        if (loadProgress !is null && loadProgress.State != NGameLoadProgress_SMgr::EState::Disabled) {
+            g_MapInfo.Draw_LoadingScreen();
+        }
+
     }
 }
 
@@ -25,6 +33,10 @@ void RenderMenu() {
     if(UI::MenuItem(MenuLabel, "", S_ShowMapInfo)) {
         S_ShowMapInfo = !S_ShowMapInfo;
     }
+}
+
+void OnSettingsChanged() {
+    if (S_ShowLoadingScreenInfo) @g_ImguiFont = UI::LoadFont("fonts/Montserrat-SemiBoldItalic.ttf", 40.f);
 }
 
 const string FmtTimestamp(uint64 timestamp) {

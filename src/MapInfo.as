@@ -468,6 +468,33 @@ class MapInfo_UI : MapInfo_Data {
         }
     }
 
+    void Draw_LoadingScreen() {
+        if (!S_ShowLoadingScreenInfo) return;
+
+        // have to use imgui to draw atop better loading screen
+        UI::DrawList@ dl = UI::GetForegroundDrawList();
+
+        string[] lines;
+
+        // lines.InsertLast("Now loading...");
+        // lines.InsertLast("");
+        lines.InsertLast(g_MapInfo.Name);
+        lines.InsertLast("by " + g_MapInfo.AuthorDisplayName);
+        lines.InsertLast("");
+        lines.InsertLast("Published: " + g_MapInfo.DateStr);
+        if (TOTDStr.Length > 0)
+            lines.InsertLast("TOTD: " + TOTDStr);
+        lines.InsertLast("Nb Players: " + NbPlayersStr);
+        lines.InsertLast("Worst Time: " + WorstTimeStr);
+        lines.InsertLast("TMX: " + TrackIDStr);
+        
+        // cant find a reliable way to get text width with imgui.. so let's make it full-width
+        dl.AddRectFilled(vec4(0, 80, Draw::GetWidth(), 50*lines.Length+20), vec4(0,0,0,0.75));
+        for (uint i = 0; i < lines.Length; i++) {
+            dl.AddText(vec2(100,100+(50*i)), vec4(1,1,1,1), lines[i], g_ImguiFont);    
+        }
+    }
+
     float HoverInterfaceScale = 0.5357;
     float HI_MaxCol1 = 64.0;
     float HI_MaxCol2 = 64.0;
