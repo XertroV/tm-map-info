@@ -1,5 +1,4 @@
 string currentMapUid;
-dictionary mapInfo;
 MapInfo_UI@ g_MapInfo = null;
 
 void CheckForNewMap() {
@@ -28,23 +27,6 @@ void OnNewMap() {
     }
     CGameCtnChallenge@ map = GetApp().RootMap;
     if (map is null) return;
-
-    mapInfo.DeleteAll();
-    getNadeoMapData(map.MapInfo.MapUid);
-    mapInfo.Set("Map UID", map.MapInfo.MapUid);
-    mapInfo.Set("Name", string(map.MapInfo.Name));
-    mapInfo.Set("Author nick", string(map.MapInfo.AuthorNickName));
-    mapInfo.Set("Author login", map.MapInfo.AuthorLogin);
-
-    if (isOnNadeoServices) {
-        mapInfo.Set("Uploaded", Time::FormatString("%c", nadeoData["uploadTimestamp"]));
-    }
-
-    // if (totdTracks.Exists(map.MapInfo.MapUid)) {
-    // 	mapInfo.Set("TOTD on", Time::FormatString("%c", uint64(totdTracks[map.MapInfo.MapUid])));
-    // } else {
-    // 	mapInfo.Set("TOTD on", "n/a");
-    // }
 }
 
 bool isOnNadeoServices = false;
