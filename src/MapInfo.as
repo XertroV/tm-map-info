@@ -250,13 +250,14 @@ class MapInfo_Data {
         if (cmap is null) return false;
         if (lastRecordsLayerIndex >= cmap.UILayers.Length) return false;
         auto layer = cmap.UILayers[lastRecordsLayerIndex];
+        if (layer is null) return false;
         auto frame = cast<CGameManialinkFrame>(layer.LocalPage.GetFirstChild("frame-records"));
         // should always be visible
         if (frame is null || !frame.Visible) return false;
-        if (!openedExploreNod) {
-            openedExploreNod = true;
-            ExploreNod(frame);
-        }
+        // if (!openedExploreNod) {
+        //     openedExploreNod = true;
+        //     ExploreNod(frame);
+        // }
         if (frame.Controls.Length < 2) return false;
         auto slideFrame = frame.Controls[1];
         if (slideFrame.ControlId != "frame-slide") throw("should be slide-frame");
