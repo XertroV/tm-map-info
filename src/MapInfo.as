@@ -119,9 +119,15 @@ class MapInfo_Data {
     // -1 for loading, 0 for no, 1 for yes
     int UploadedToNadeo = -1;
 
+    int UploadedToTMX = -1;
+    int TrackID = -1;
+    string TrackIDStr = "...";
+    // When `null`, there's no TMX info. It should never be Json::Type::Null.
+    Json::Value@ TMX_Info = null;
+
     uint NbPlayers = LoadingNbPlayersFlag;
     uint WorstTime = 0;
-    string NbPlayersStr = "-";
+    string NbPlayersStr = "...";
     string WorstTimeStr = "";
 
     string TOTDDate = "";
@@ -236,7 +242,16 @@ class MapInfo_Data {
     }
 
     void GetMapTMXStatus() {
-
+        auto tmxTrack = TMX::GetMapFromUid(uid);
+        if (tmxTrack.GetType() == Json::Type::Object) {
+            UploadedToTMX = 1;
+            TrackID = int(tmxTrack.Get('TrackID', -1));
+            TrackIDStr = tostring(TrackID);
+            @TMX_Info = tmxTrack;
+        } else {
+            UploadedToTMX = 0;
+            TrackIDStr = "Not Uploaded";
+        }
     }
 
     bool IsGoodUISequence(CGamePlaygroundUIConfig::EUISequence uiSeq) {
@@ -434,11 +449,13 @@ class MapInfo_UI : MapInfo_Data {
         if (!LoadedNbPlayers && Time::Now - LoadingStartedAt < 5000) return;
         auto cmap = GetApp().Network.ClientManiaAppPlayground;
         auto pgcsa = GetApp().Network.PlaygroundClientScriptAPI;
+        auto ps = cast<CSmArenaRulesMode>(GetApp().PlaygroundScript);
         bool closed = !S_ShowMapInfo
             || !_GameUIVisible
             || !ShouldDrawUI
             || cmap is null || !IsGoodUISequence(cmap.UI.UISequence)
             || pgcsa is null || pgcsa.IsInGameMenuDisplayed
+            || (ps !is null && ps.StartTime > 2147483000)
             // cost about 0.12 ms!
             // || !UI::IsGameUIVisible()
             ;
@@ -540,13 +557,14 @@ class MapInfo_UI : MapInfo_Data {
 
         bool drawTotd = TOTDStr.Length > 0;
 
-        int nbRows = 6;
+        // ! should match the number of calls to DrawDataLabels
+        int nbRows = 7;
         if (!drawTotd) nbRows--;
 
         nvg::BeginPath();
 
         vec2 tl = rect.xy + vec2(rect.z + gap, 0);
-        float rowsHeight = yStep * nbRows;
+        float rowsHeight = yStep * nbRows + xPad * 0.5;
         float fullWidth = HI_MaxCol1 + HI_MaxCol2 + xPad * 4.0;
         float thumbnailFrameHeight = Math::Min(fullRecordsHeight * screen.y - rowsHeight, fullWidth);
         float thumbnailHeight = thumbnailFrameHeight - xPad * 2.0;
@@ -567,7 +585,9 @@ class MapInfo_UI : MapInfo_Data {
         float alpha = .9;
         nvg::FillColor(vec4(1, 1, 1, alpha));
 
-        vec2 pos = tl + vec2(xPad, textHOffset);
+        vec2 pos = tl + vec2(xPad, textHOffset + xPad * 0.5);
+
+        // ! update nbRows if you add more DrawDataLabels
 
         pos = DrawDataLabels(pos, yStep, col2X, fs, "Name", CleanName, NvgName, alpha);
         // pos = DrawDataLabels(pos, yStep, col2X, fs, "Name", CleanName);
@@ -579,6 +599,7 @@ class MapInfo_UI : MapInfo_Data {
             pos = DrawDataLabels(pos, yStep, col2X, fs, "TOTD", TOTDStr);
         pos = DrawDataLabels(pos, yStep, col2X, fs, "Nb Players", NbPlayersStr);
         pos = DrawDataLabels(pos, yStep, col2X, fs, "Worst Time", WorstTimeStr);
+        pos = DrawDataLabels(pos, yStep, col2X, fs, "TMX", TrackIDStr);
 
         pos.x -= xPad;
 
