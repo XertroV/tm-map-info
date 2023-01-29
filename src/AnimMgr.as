@@ -22,6 +22,7 @@ class AnimMgr {
         if (lastGrowingCheck == 0) lastGrowingCheck = Time::Now;
 
         float delta = float(int(Time::Now) - int(lastGrowingCheck)) / animDuration;
+        delta = Math::Min(delta, 0.1);
         lastGrowingCheck = Time::Now;
 
         float sign = growing ? 1.0 : -1.0;

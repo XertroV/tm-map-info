@@ -149,6 +149,7 @@ class MapInfo_Data {
         startnew(CoroutineFunc(this.GetMapInfoFromCoreAPI));
         startnew(CoroutineFunc(this.GetMapInfoFromMapMonitorAPI));
         startnew(CoroutineFunc(this.GetMapTOTDStatus));
+        startnew(CoroutineFunc(this.GetMapTMXStatus));
         startnew(CoroutineFunc(this.MonitorRecordsVisibility));
         startnew(CoroutineFunc(this.MonitorUIVisibility));
     }
@@ -161,6 +162,7 @@ class MapInfo_Data {
     }
 
     void GetMapInfoFromCoreAPI() {
+        if (UploadedToNadeo == 1) return;
         // This should usually be near-instant b/c the game has probably already loaded this.
         auto info = Core::GetMapFromUid(uid);
         if (info is null) {
@@ -188,6 +190,18 @@ class MapInfo_Data {
 
         LoadedMapData = true;
         trace('MapInfo_Data loaded map data');
+        startnew(CoroutineFunc(this.LoadThumbnail));
+    }
+
+    nvg::Texture@ ThumbnailTexture = null;
+    void LoadThumbnail() {
+        auto req = Net::HttpGet(ThumbnailUrl);
+        while (!req.Finished()) yield();
+        if (req.ResponseCode() != 200) {
+            warn('GET Thumbnail response: ' + req.ResponseCode());
+            return;
+        }
+        @ThumbnailTexture = nvg::LoadTexture(req.Buffer());
     }
 
     void GetMapInfoFromMapMonitorAPI() {
@@ -219,6 +233,10 @@ class MapInfo_Data {
             TOTDStr = "";
         }
         LoadedWasTOTD = true;
+    }
+
+    void GetMapTMXStatus() {
+
     }
 
     bool IsGoodUISequence(CGamePlaygroundUIConfig::EUISequence uiSeq) {
@@ -387,14 +405,16 @@ class MapInfo_UI : MapInfo_Data {
     float fontProp = 40.0 / baseRes.y;
     float xPaddingProp = 20.0 / baseRes.y;
     float gapProp = 8.0 / baseRes.y;
+    float recordsHeight = 480.0 / baseRes.y;
+    float fullRecordsHeight = 72.0 / baseRes.y + recordsHeight;
 
     // offset from middle of screen
     float topRightYOffs = (480.0 - baseRes.y / 2.0) / baseRes.y;
     float topRightXOffs = - (1720.0 - 840.0) / baseRes.x;
     vec2 trOffs = vec2(topRightXOffs, topRightYOffs);
     vec2 screen = baseRes;
-
     vec4 bounds = vec4(-10);
+
     vec4 UpdateBounds() {
         screen = vec2(Draw::GetWidth(), Draw::GetHeight());
         vec2 midPoint = screen / 2.0;
@@ -514,9 +534,6 @@ class MapInfo_UI : MapInfo_Data {
         xPad *= HoverInterfaceScale;
         textHOffset *= HoverInterfaceScale;
 
-        float newMax1 = 0.0;
-        float newMax2 = 0.0;
-
         float yStep = rect.w * HoverInterfaceScale;
         nvg::TextAlign(nvg::Align::Top | nvg::Align::Left);
         nvg::FontSize(fs);
@@ -529,7 +546,12 @@ class MapInfo_UI : MapInfo_Data {
         nvg::BeginPath();
 
         vec2 tl = rect.xy + vec2(rect.z + gap, 0);
-        vec2 fullSize = vec2(HI_MaxCol1 + HI_MaxCol2 + xPad * 4.0, yStep * nbRows);
+        float rowsHeight = yStep * nbRows;
+        float fullWidth = HI_MaxCol1 + HI_MaxCol2 + xPad * 4.0;
+        float thumbnailFrameHeight = Math::Min(fullRecordsHeight * screen.y - rowsHeight, fullWidth);
+        float thumbnailHeight = thumbnailFrameHeight - xPad * 2.0;
+        if (ThumbnailTexture is null) thumbnailFrameHeight = 0.0;
+        vec2 fullSize = vec2(fullWidth, rowsHeight + thumbnailFrameHeight);
 
         // slider anim: scissor then offset
         nvg::Scissor(tl.x, tl.y, fullSize.x, fullSize.y);
@@ -558,7 +580,20 @@ class MapInfo_UI : MapInfo_Data {
         pos = DrawDataLabels(pos, yStep, col2X, fs, "Nb Players", NbPlayersStr);
         pos = DrawDataLabels(pos, yStep, col2X, fs, "Worst Time", WorstTimeStr);
 
+        pos.x -= xPad;
+
+        if (ThumbnailTexture !is null) {
+            vec2 size = vec2(thumbnailHeight, thumbnailHeight);
+            vec2 tl = pos + vec2(fullWidth, 0) / 2.0 - vec2(size.x / 2.0, 0);
+            nvg::ClosePath();
+            nvg::BeginPath();
+            nvg::Rect(tl, size);
+            nvg::FillPaint(nvg::TexturePattern(tl, size, 0.0, ThumbnailTexture, 1.0));
+            nvg::Fill();
+        }
+
         nvg::ClosePath();
+        nvg::ResetTransform();
     }
 
 
