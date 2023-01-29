@@ -62,7 +62,7 @@ for pluginSrc in ${pluginSources[@]}; do
   PLUGIN_RELEASE_LOC=$PLUGINS_DIR/$RELEASE_NAME
 
   function buildPlugin {
-    7z a ./$BUILD_NAME ./fonts ./$pluginSrc/* ./LICENSE ./README.md
+    7z a ./$BUILD_NAME ./$pluginSrc/* ./LICENSE ./README.md
     # 7z a ./$BUILD_NAME ./$pluginSrc/*.as ./$pluginSrc/info.toml ./LICENSE ./README.md
 
     cp -v $BUILD_NAME $RELEASE_NAME
@@ -92,7 +92,6 @@ for pluginSrc in ${pluginSources[@]}; do
     dev)
       sed -i 's/^\(name[ \t="]*\)\(.*\)"/\1\2 (Dev)"/' $_build_dest/info.toml
       sed -i 's/^#__DEFINES__/defines = ["DEV"]/' $_build_dest/info.toml
-      sed -i 's/^module = "CGF"/module = "CGFDev"/' $_build_dest/info.toml
       ;;
     prerelease)
       sed -i 's/^\(name[ \t="]*\)\(.*\)"/\1\2 (Prerelease)"/' $_build_dest/info.toml

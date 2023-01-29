@@ -1,19 +1,22 @@
+// int g_NvgFont = nvg::LoadFont("fonts/Montserrat-BoldItalic.ttf", true, true);
 int g_NvgFont = nvg::LoadFont("fonts/Montserrat-SemiBoldItalic.ttf", true, true);
 
 void Main() {
     startnew(ClearTaskCoro);
     startnew(TOTD::LoadTOTDs);
-    while (true) {
-        step();
-        yield();
-    }
+}
+
+/** Called every frame. `dt` is the delta time (milliseconds since last frame).
+*/
+void Update(float dt) {
+    CheckForNewMap();
 }
 
 void Render() {
     DrawMapInfoUI();
     if (g_MapInfo !is null) {
         g_MapInfo.Draw();
-        g_MapInfo.Draw_DebugUI();
+        // g_MapInfo.Draw_DebugUI();
     }
 }
 
@@ -62,9 +65,3 @@ void OnMouseMove(int x, int y) {
     g_MouseCoords.y = y;
     // trace('Updated mouse pos ' + Time::Now);
 }
-
-// /** Called every frame. `dt` is the delta time (milliseconds since last frame).
-// */
-// void Update(float dt) {
-// 	trace('Update: ' + Time::Now + "   " + dt);
-// }

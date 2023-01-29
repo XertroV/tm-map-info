@@ -8,3 +8,4 @@ siteid = 320
 [script]
 dependencies = ["NadeoServices"]
 optional_dependencies = []
+#__DEFINES__

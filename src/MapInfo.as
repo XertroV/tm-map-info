@@ -25,12 +25,11 @@ void DrawMapInfoUI() {
 
 
 
-dictionary mapInfo;
 string currentMapUid;
-
+dictionary mapInfo;
 MapInfo_UI@ g_MapInfo = null;
 
-void step() {
+void CheckForNewMap() {
     CTrackMania@ app = cast<CTrackMania>(GetApp());
     string mapUid;
     if (app.CurrentPlayground is null || app.RootMap is null || app.Editor !is null) {
@@ -41,13 +40,13 @@ void step() {
 
     if(mapUid != currentMapUid) {
         currentMapUid = mapUid;
-        onNewMap();
+        startnew(OnNewMap);
     }
 }
 
 
 
-void onNewMap() {
+void OnNewMap() {
     if (currentMapUid.Length == 0) {
         @g_MapInfo = null;
         return;
@@ -100,6 +99,9 @@ class MapInfo_Data {
     string uid;
     string author;
     string Name;
+    string RawName;
+    string CleanName;
+    NvgText@ NvgName;
 
     string AuthorAccountId = "";
     string AuthorDisplayName = "";
@@ -116,11 +118,14 @@ class MapInfo_Data {
 
     uint NbPlayers = LoadingNbPlayersFlag;
     uint WorstTime = 0;
-    string NbPlayersStr = "";
+    string NbPlayersStr = "-";
     string WorstTimeStr = "";
 
     string TOTDDate = "";
+    int TOTDDaysAgo = -1;
+    string TOTDStr = "...";
 
+    uint LoadingStartedAt = Time::Now;
     bool LoadedMapData = false;
     bool LoadedNbPlayers = false;
     bool LoadedWasTOTD = false;
@@ -129,11 +134,19 @@ class MapInfo_Data {
         auto map = GetApp().RootMap;
         if (map is null) throw("Cannot instantiate MapInfo_Data when RootMap is null.");
         uid = map.EdChallengeId;
-        Name = ColoredString(map.MapName);
+        SetName(map.MapName);
         author = map.AuthorNickName;
         startnew(CoroutineFunc(this.GetMapInfoFromCoreAPI));
         startnew(CoroutineFunc(this.GetMapInfoFromMapMonitorAPI));
         startnew(CoroutineFunc(this.GetMapTOTDStatus));
+        startnew(CoroutineFunc(this.MonitorRecordsVisibility));
+    }
+
+    void SetName(const string &in name) {
+        RawName = name;
+        Name = ColoredString(name);
+        @NvgName = NvgText(name);
+        CleanName = StripFormatCodes(name);
     }
 
     void GetMapInfoFromCoreAPI() {
@@ -144,7 +157,7 @@ class MapInfo_Data {
         AuthorDisplayName = info.AuthorDisplayName;
         AuthorWebServicesUserId = info.AuthorWebServicesUserId;
 
-        Name = ColoredString(info.Name);
+        SetName(info.Name);
         FileName = info.FileName;
         FileUrl = info.FileUrl;
         ThumbnailUrl = info.ThumbnailUrl;
@@ -165,16 +178,133 @@ class MapInfo_Data {
         NbPlayers = resp.Get('nb_players', 98765);
         WorstTime = resp.Get('last_highest_score', 0);
 
-        NbPlayersStr = NbPlayers % 1000 == 0 ? tostring(NbPlayers / 1000) + " K" : tostring(NbPlayers);
+        NbPlayersStr = NbPlayers >= 10000 && NbPlayers % 1000 == 0 ? tostring(NbPlayers / 1000) + "k" : tostring(NbPlayers);
         WorstTimeStr = Time::Format(WorstTime);
 
         LoadedNbPlayers = true;
         trace('MapInfo_Data loaded nb players');
+
+        float refreshInSeconds = resp.Get('refresh_in', 150.0);
+        trace('Refreshing nb players in: ' + refreshInSeconds);
+        sleep(int(refreshInSeconds * 1000.0));
+        startnew(CoroutineFunc(this.GetMapInfoFromMapMonitorAPI));
     }
 
     void GetMapTOTDStatus() {
         TOTDDate = TOTD::GetDateMapWasTOTD_Async(uid);
+        TOTDDaysAgo = TOTD::GetDaysAgo_Async(uid);
+        if (TOTDDate.Length > 0 && TOTDDaysAgo >= 0) {
+            TOTDStr = TOTDDate + " (" + (TOTDDaysAgo > 0 ? TOTDDaysAgo + " days ago)" : "today)");
+        } else {
+            TOTDStr = "";
+        }
         LoadedWasTOTD = true;
+    }
+
+    private uint lastNbUilayers = 0;
+    bool IsUIPopulated() {
+        auto cmap = GetApp().Network.ClientManiaAppPlayground;
+        if (cmap is null) return false;
+        auto nbUiLayers = cmap.UILayers.Length;
+        // if the number of UI layers decreases it's probably due to a recovery restart, so we don't want to act on old references
+        if (nbUiLayers <= 2 || nbUiLayers < lastNbUilayers) {
+            trace('nbUiLayers: ' + nbUiLayers + '; lastNbUilayers' + lastNbUilayers);
+            return false;
+        }
+        lastNbUilayers = nbUiLayers;
+        return true;
+    }
+
+    bool ShouldDrawUI {
+        get {
+            return UI::IsGameUIVisible() && isRecordsElementVisisble;
+        }
+    }
+    private bool isRecordsElementVisisble = false;
+    private void MonitorRecordsVisibility() {
+        trace('test populated');
+        while (!IsUIPopulated()) yield();
+        trace('test safe');
+        if (!IsSafeToCheckUI()) throw('unexpected');
+        trace('is safe');
+        // once we detect things have started to load, wait another second
+        trace('sleep');
+        sleep(1000);
+        trace('assert safe');
+        if (!IsSafeToCheckUI()) return; // throw("Should only happen if we exit the map super fast.");
+        trace('find UI elements');
+        FindUIElements();
+        trace('done checking ui. found: ' + lastRecordsLayerIndex);
+        while (true) {
+            yield();
+            if (!IsSafeToCheckUI()) break;
+            isRecordsElementVisisble = IsRecordElementVisible();
+        }
+    }
+
+    float slideFrameProgress = 1.0;
+
+    private bool openedExploreNod = false;
+    private bool IsRecordElementVisible() {
+        auto cmap = GetApp().Network.ClientManiaAppPlayground;
+        if (cmap is null) return false;
+        if (lastRecordsLayerIndex >= cmap.UILayers.Length) return false;
+        auto layer = cmap.UILayers[lastRecordsLayerIndex];
+        auto frame = cast<CGameManialinkFrame>(layer.LocalPage.GetFirstChild("frame-records"));
+        // should always be visible
+        if (frame is null || !frame.Visible) return false;
+        if (!openedExploreNod) {
+            openedExploreNod = true;
+            ExploreNod(frame);
+        }
+        if (frame.Controls.Length < 2) return false;
+        auto slideFrame = frame.Controls[1];
+        if (slideFrame.ControlId != "frame-slide") throw("should be slide-frame");
+        slideFrameProgress = (slideFrame.RelativePosition_V3.x + 61.0) / 61.0;
+        return slideFrameProgress > 0.0;
+    }
+
+    private uint lastRecordsLayerIndex = 14;
+    private void FindUIElements() {
+        auto app = cast<CTrackMania>(GetApp());
+        auto cmap = app.Network.ClientManiaAppPlayground;
+        if (cmap is null) throw('should never be null');
+        auto nbLayers = cmap.UILayers.Length;
+        trace('nb layers: ' + nbLayers);
+        bool foundRecordsLayer = lastRecordsLayerIndex < nbLayers
+            && IsUILayerRecordLayer(cmap.UILayers[lastRecordsLayerIndex]);
+        trace('did not find records layer with init check');
+        if (!foundRecordsLayer) {
+            // don't check very early layers -- might sometimes crash the game?
+            for (uint i = 3; i < nbLayers; i++) {
+                trace('checking layer: ' + i);
+                if (IsUILayerRecordLayer(cmap.UILayers[i])) {
+                    lastRecordsLayerIndex = i;
+                    foundRecordsLayer = true;
+                    break;
+                }
+            }
+        }
+        if (!foundRecordsLayer)
+            throw('unexpected: couldnt find records layer');
+    }
+
+    bool IsUILayerRecordLayer(CGameUILayer@ layer) {
+        trace('checking layer');
+        if (layer is null) return false;
+        trace('checking layer ML length');
+        // when ManialinkPage length is zero, accessing stuff might crash the game (specifically, ManialinkPageUtf8)
+        if (layer.ManialinkPage.Length == 0) return false;
+        trace('checking layer ML');
+        // accessing ManialinkPageUtf8 in some cases might crash the game
+        return string(layer.ManialinkPage.SubStr(0, 127)).Trim().StartsWith('<manialink name="UIModule_Race_Record"');
+    }
+
+    bool IsSafeToCheckUI() {
+        auto app = GetApp();
+        if (app.RootMap is null || app.CurrentPlayground is null || app.Editor !is null) return false;
+        if (!IsUIPopulated()) return false;
+        return true;
     }
 }
 
@@ -211,8 +341,20 @@ class MapInfo_UI : MapInfo_Data {
         return bounds;
     }
 
+    AnimMgr@ mainAnim = AnimMgr();
+    AnimMgr@ hoverAnim = AnimMgr();
+
     void Draw() {
-        if (!UI::IsGameUIVisible()) return;
+        if (!UI::IsGameUIVisible() || !ShouldDrawUI) {
+            mainAnim.SetAt(0.0);
+            hoverAnim.SetAt(0.0);
+            // lastHoverChange = Time::Now;
+            lastMapInfoSize = vec2();
+            return;
+        }
+        if (!LoadedNbPlayers && Time::Now - LoadingStartedAt < 5000) return;
+        mainAnim.Update(true, slideFrameProgress);
+
         auto rect = UpdateBounds();
 
         float fs = fontProp * screen.y;
@@ -232,6 +374,13 @@ class MapInfo_UI : MapInfo_Data {
         rect.z = width;
         float textHOffset = rect.w * .55 - textSize.y / 2.0;
 
+        // animate sliding away when record UI opens/closes
+        // first, set up a scissor similar to the records UI
+        nvg::Scissor(rect.x, rect.y, rect.z, rect.w);
+        // now, offset everything depending on slider progress
+        nvg::Translate(vec2((1.0 - mainAnim.Progress) * rect.z, 0));
+        // that's all we need.
+
         nvg::BeginPath();
         DrawBgRect(rect.xy, rect.zw);
         // nvg::Rect(rect.xy, rect.zw);
@@ -243,15 +392,50 @@ class MapInfo_UI : MapInfo_Data {
 
         nvg::ClosePath();
 
-        if (IsWithin(g_MouseCoords, rect.xy, rect.zw)) {
+        // reset scissor so we can draw the hover
+        nvg::ResetScissor();
+        nvg::ResetTransform();
+
+        bool rawHover = IsWithin(g_MouseCoords, rect.xy, rect.zw + vec2(gap, 0))
+            || IsWithin(g_MouseCoords, rect.xy + vec2(rect.z + gap, 0), lastMapInfoSize);
+            ;
+        if (hoverAnim.Update(rawHover, slideFrameProgress)) {
             DrawHoveredInterface(rect, fs, xPad, textHOffset, gap);
         }
-
     }
 
-    float HoverInterfaceScale = 0.75;
+    // in ms
+    // float animDuration = 250.0;
+    // bool lastHover = false;
+    // float t_hover = 0.0;
+    // float hoverSlide = 0.0;
+    // uint lastHoverChange = 0;
+    // uint lastHoverCheck = 0;
+    // bool TrackHovering(bool hoverRaw) {
+    //     if (lastHoverChange == 0) lastHoverChange = Time::Now;
+    //     if (lastHoverCheck == 0) lastHoverCheck = Time::Now;
+
+    //     float delta = float(int(Time::Now) - int(lastHoverCheck)) / animDuration;
+    //     lastHoverCheck = Time::Now;
+
+    //     float sign = hoverRaw ? 1.0 : -1.0;
+    //     t_hover = Math::Clamp(t_hover + sign * delta, 0.0, 1.0);
+    //     // float t_hover = Math::Clamp(float(int(Time::Now) - int(lastHoverChange)) / animDuration, 0.0, 1.0);
+    //     // if (lastHover) t_hover = 1.0 - t_hover;
+    //     if (lastHover != hoverRaw) {
+    //         lastHover = hoverRaw;
+    //         lastHoverChange = Time::Now;
+    //     }
+    //     hoverSlide = -(t_hover * (t_hover - 2.));
+    //     // hoverSlide = 1.0;
+    //     hoverSlide = Math::Min(slideFrameProgress, hoverSlide);
+    //     return hoverSlide > 0.;
+    // }
+
+    float HoverInterfaceScale = 0.5357;
     float HI_MaxCol1 = 64.0;
     float HI_MaxCol2 = 64.0;
+    vec2 lastMapInfoSize = vec2();
 
     void DrawHoveredInterface(vec4 rect, float fs, float xPad, float textHOffset, float gap) {
         fs *= HoverInterfaceScale;
@@ -265,42 +449,62 @@ class MapInfo_UI : MapInfo_Data {
         nvg::TextAlign(nvg::Align::Top | nvg::Align::Left);
         nvg::FontSize(fs);
 
+        bool drawTotd = TOTDStr.Length > 0;
+
         int nbRows = 6;
+        if (!drawTotd) nbRows--;
 
         nvg::BeginPath();
 
         vec2 tl = rect.xy + vec2(rect.z + gap, 0);
-        DrawBgRect(tl, vec2(HI_MaxCol1 + HI_MaxCol2 + xPad * 4.0, yStep * nbRows));
-        float col2X = HI_MaxCol1 + xPad * 3.0;
+        vec2 fullSize = vec2(HI_MaxCol1 + HI_MaxCol2 + xPad * 4.0, yStep * nbRows);
+
+        // slider anim: scissor then offset
+        nvg::Scissor(tl.x, tl.y, fullSize.x, fullSize.y);
+        nvg::Translate(vec2(fullSize.x * (hoverAnim.Progress - 1.0), 0));
+        lastMapInfoSize = fullSize * vec2(hoverAnim.Progress, 1);
+
+        DrawBgRect(tl, fullSize);
+        float col2X = HI_MaxCol1 + xPad * 2.0;
 
         HI_MaxCol1 = 0.0;
         HI_MaxCol2 = 0.0;
 
-        nvg::FillColor(vec4(1.0));
+        float alpha = .9;
+        nvg::FillColor(vec4(1, 1, 1, alpha));
+
         vec2 pos = tl + vec2(xPad, textHOffset);
-        pos = DrawDataLabels(pos, yStep, col2X, "Name", Name);
-        pos = DrawDataLabels(pos, yStep, col2X, "Author", AuthorDisplayName);
-        // pos = DrawDataLabels(pos, yStep, col2X, "Author WSID", AuthorWebServicesUserId);
-        // pos = DrawDataLabels(pos, yStep, col2X, "Author AcctID", AuthorAccountId);
-        pos = DrawDataLabels(pos, yStep, col2X, "Published", DateStr);
-        pos = DrawDataLabels(pos, yStep, col2X, "TOTD", TOTDDate.Length > 0 ? TOTDDate : "--");
-        pos = DrawDataLabels(pos, yStep, col2X, "Nb Players", NbPlayersStr);
-        pos = DrawDataLabels(pos, yStep, col2X, "Worst Time", WorstTimeStr);
+
+        pos = DrawDataLabels(pos, yStep, col2X, fs, "Name", CleanName, NvgName, alpha);
+        // pos = DrawDataLabels(pos, yStep, col2X, fs, "Name", CleanName);
+        pos = DrawDataLabels(pos, yStep, col2X, fs, "Author", AuthorDisplayName);
+        // pos = DrawDataLabels(pos, yStep, col2X, fs, "Author WSID", AuthorWebServicesUserId);
+        // pos = DrawDataLabels(pos, yStep, col2X, fs, "Author AcctID", AuthorAccountId);
+        pos = DrawDataLabels(pos, yStep, col2X, fs, "Published", DateStr);
+        if (drawTotd)
+            pos = DrawDataLabels(pos, yStep, col2X, fs, "TOTD", TOTDStr);
+        pos = DrawDataLabels(pos, yStep, col2X, fs, "Nb Players", NbPlayersStr);
+        pos = DrawDataLabels(pos, yStep, col2X, fs, "Worst Time", WorstTimeStr);
 
         nvg::ClosePath();
     }
 
+
+
     void DrawBgRect(vec2 pos, vec2 size) {
         nvg::Rect(pos, size);
-        nvg::FillColor(vec4(0, 0, 0, .8));
+        nvg::FillColor(vec4(0, 0, 0, .85));
         nvg::Fill();
     }
 
-    vec2 DrawDataLabels(vec2 pos, float yStep, float col2X, const string &in label, const string &in value) {
+    vec2 DrawDataLabels(vec2 pos, float yStep, float col2X, float fs, const string &in label, const string &in value, NvgText@ textObj = null, float alpha = 1.0) {
         HI_MaxCol1 = Math::Max(nvg::TextBounds(label).x, HI_MaxCol1);
         HI_MaxCol2 = Math::Max(nvg::TextBounds(value).x, HI_MaxCol2);
         nvg::Text(pos, label);
-        nvg::Text(pos + vec2(col2X, 0), value);
+        if (textObj is null)
+            nvg::Text(pos + vec2(col2X, 0), value);
+        else
+            textObj.Draw(pos + vec2(col2X, 0), vec3(1, 1, 1), fs, alpha);
         pos.y += yStep;
         return pos;
     }
@@ -320,7 +524,7 @@ class MapInfo_UI : MapInfo_Data {
             DebugUITableRow("Author WSID:", AuthorWebServicesUserId);
             DebugUITableRow("Author AcctID:", AuthorAccountId);
             DebugUITableRow("Published:", DateStr);
-            DebugUITableRow("TOTD:", TOTDDate.Length > 0 ? TOTDDate : "--");
+            DebugUITableRow("TOTD:", TOTDStr);
             DebugUITableRow("Nb Players:", NbPlayersStr);
             DebugUITableRow("Worst Time:", WorstTimeStr);
 
@@ -340,6 +544,90 @@ class MapInfo_UI : MapInfo_Data {
 
 
 
+/**
+ * Parse a color string and provide a draw function so that we can draw colored text.
+ */
+class NvgText {
+    string[]@ parts;
+    vec3[] cols;
+
+    NvgText(const string &in coloredText) {
+        auto preText = ColoredString(StripNonColorFormatCodes(coloredText));
+        @parts = preText.Split("\\$");
+        uint startAt = 0;
+        if (!preText.StartsWith("\\$")) {
+            startAt = 1;
+            cols.InsertLast(vec3(-1, -1, -1));
+        }
+        for (uint i = startAt; i < parts.Length; i++) {
+            if (parts[i].Length == 0) {
+                cols.InsertLast(vec3(-1, -1, -1));
+                continue;
+            }
+            if (parts[i].SubStr(0, 1).ToLower() == "z") {
+                parts[i] = parts[i].SubStr(1);
+                cols.InsertLast(vec3(-1, -1, -1));
+                continue;
+            }
+            auto hex = parts[i].SubStr(0, 3);
+            parts[i] = parts[i].SubStr(3);
+            cols.InsertLast(hexTriToRgb(hex));
+        }
+    }
+
+    void Draw(vec2 pos, vec3 defaultCol, float fs, float alpha = 1.0) {
+        float xOff = 0;
+        for (uint i = 0; i < parts.Length; i++) {
+            auto col = cols[i];
+            if (col.x < 0) col = defaultCol;
+            nvg::FillColor(vec4(col.x, col.y, col.z, alpha));
+            auto xy = nvg::TextBounds(parts[i]);
+            nvg::Text(pos + vec2(xOff, 0), parts[i]);
+            xOff += Math::Max(0.0, xy.x - fs / 7.0);
+        }
+        nvg::FillColor(vec4(defaultCol.x, defaultCol.y, defaultCol.z, alpha));
+    }
+}
+
+
+bool IsCharInt(int char) {
+    return 48 <= char && char <= 57;
+}
+
+bool IsCharInAToF(int char) {
+    return (97 <= char && char <= 102) /* lower case */
+        || (65 <= char && char <= 70); /* upper case */
+}
+
+bool IsCharHex(int char) {
+    return IsCharInt(char) || IsCharInAToF(char);
+}
+
+uint8 HexCharToInt(int char) {
+    if (IsCharInt(char)) {
+        return char - 48;
+    }
+    if (IsCharInAToF(char)) {
+        int v = char - 65 + 10;  // A = 65 ascii
+        if (v < 16) return v;
+        return v - (97 - 65);    // a = 97 ascii
+    }
+    throw("HexCharToInt got char with code " + char + " but that isn't 0-9 or a-f or A-F in ascii.");
+    return 0;
+}
+
+vec3 hexTriToRgb(const string &in hexTri) {
+    if (hexTri.Length != 3) { throw ("hextri must have 3 characters. bad input: " + hexTri); }
+    try {
+        float r = HexCharToInt(hexTri[0]);
+        float g = HexCharToInt(hexTri[1]);
+        float b = HexCharToInt(hexTri[2]);
+        return vec3(r, g, b) / 15.;
+    } catch {
+        throw("Exception while processing hexTri (" + hexTri + "): " + getExceptionInfo());
+    }
+    return vec3();
+}
 
 
 // class MurderChairsUI {
