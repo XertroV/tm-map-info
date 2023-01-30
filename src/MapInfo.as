@@ -631,7 +631,7 @@ class MapInfo_UI : MapInfo_Data {
         pos = DrawDataLabels(pos, col, yStep, col2X, fs, "Published", DateStr, null, 1.0, TMioButton);
         if (drawTotd)
             pos = DrawDataLabels(pos, col, yStep, col2X, fs, "TOTD", TOTDStr);
-        pos = DrawDataLabels(pos, col, yStep, col2X, fs, "Nb Players", NbPlayersStr);
+        pos = DrawDataLabels(pos, col, yStep, col2X, fs, "# Finishes", NbPlayersStr);
         pos = DrawDataLabels(pos, col, yStep, col2X, fs, "Worst Time", WorstTimeStr);
         pos = DrawDataLabels(pos, col, yStep, col2X, fs, "TMX", TrackIDStr, null, 1.0, TMXButton);
 
@@ -688,10 +688,11 @@ class MapInfo_UI : MapInfo_Data {
             button.DrawButton(c2Pos - vec2(0, c2Size.y * 0.05), c2Size, vec4(1, 1, 1, 1), vec2(xPad, xPad) / 2.0, mainAnim.Progress);
         }
 
-        if (textObj is null)
+        if (textObj is null) {
             nvg::Text(c2Pos, value);
-        else
+        } else {
             textObj.Draw(c2Pos, vec3(1, 1, 1), fs, alpha);
+        }
         pos.y += yStep;
         return pos;
     }
@@ -712,7 +713,7 @@ class MapInfo_UI : MapInfo_Data {
             DebugUITableRow("Author AcctID:", AuthorAccountId);
             DebugUITableRow("Published:", DateStr);
             DebugUITableRow("TOTD:", TOTDStr);
-            DebugUITableRow("Nb Players:", NbPlayersStr);
+            DebugUITableRow("# Finishes:", NbPlayersStr);
             DebugUITableRow("Worst Time:", WorstTimeStr);
 
             UI::EndTable();
