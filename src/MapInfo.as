@@ -1,32 +1,4 @@
-
-void DrawMapInfoUI() {
-    if (!S_ShowMapInfo) return;
-    if (GetApp().CurrentPlayground is null || GetApp().RootMap is null || GetApp().Editor !is null) return;
-
-    // @todo: maybe do this with nvg instead?
-    if (UI::Begin("\\$8f0" + Icons::Map + "\\$z Map Info", UI::WindowFlags::AlwaysAutoResize)) {
-
-        // shitty debug view for now
-        UI::BeginTable("mapInfoDebug", 2);
-
-        string[] keys = mapInfo.GetKeys();
-        for (uint i = 0; i < keys.Length; i++) {
-            UI::TableNextRow();
-            UI::TableNextColumn();
-            UI::Text(keys[i]);
-            UI::TableNextColumn();
-            UI::Text(string(mapInfo[keys[i]]));
-        }
-
-        UI::EndTable();
-    }
-    UI::End();
-}
-
-
-
 string currentMapUid;
-dictionary mapInfo;
 MapInfo_UI@ g_MapInfo = null;
 
 void CheckForNewMap() {
@@ -55,23 +27,6 @@ void OnNewMap() {
     }
     CGameCtnChallenge@ map = GetApp().RootMap;
     if (map is null) return;
-
-    mapInfo.DeleteAll();
-    getNadeoMapData(map.MapInfo.MapUid);
-    mapInfo.Set("Map UID", map.MapInfo.MapUid);
-    mapInfo.Set("Name", string(map.MapInfo.Name));
-    mapInfo.Set("Author nick", string(map.MapInfo.AuthorNickName));
-    mapInfo.Set("Author login", map.MapInfo.AuthorLogin);
-
-    if (isOnNadeoServices) {
-        mapInfo.Set("Uploaded", Time::FormatString("%c", nadeoData["uploadTimestamp"]));
-    }
-
-    // if (totdTracks.Exists(map.MapInfo.MapUid)) {
-    // 	mapInfo.Set("TOTD on", Time::FormatString("%c", uint64(totdTracks[map.MapInfo.MapUid])));
-    // } else {
-    // 	mapInfo.Set("TOTD on", "n/a");
-    // }
 }
 
 bool isOnNadeoServices = false;
@@ -284,7 +239,7 @@ class MapInfo_Data {
         // so probs best to check that (no string operations).
         auto cmap = GetApp().Network.ClientManiaAppPlayground;
         if (cmap is null) return false;
-        for (uint i = 2; i < Math::Min(8, cmap.UILayers.Length); i++) {
+        for (uint i = 2; i < uint(Math::Min(8, cmap.UILayers.Length)); i++) {
             auto layer = cmap.UILayers[i];
             if (layer !is null && layer.Type == CGameUILayer::EUILayerType::ScoresTable) {
                 return layer.LocalPage !is null && layer.LocalPage.MainFrame !is null && layer.LocalPage.MainFrame.Visible;
@@ -515,6 +470,33 @@ class MapInfo_UI : MapInfo_Data {
         }
     }
 
+    void Draw_LoadingScreen() {
+        if (!S_ShowLoadingScreenInfo) return;
+
+        // have to use imgui to draw atop better loading screen
+        UI::DrawList@ dl = UI::GetForegroundDrawList();
+
+        string[] lines;
+
+        // lines.InsertLast("Now loading...");
+        // lines.InsertLast("");
+        lines.InsertLast(g_MapInfo.Name);
+        lines.InsertLast("by " + g_MapInfo.AuthorDisplayName);
+        lines.InsertLast("");
+        lines.InsertLast("Published: " + g_MapInfo.DateStr);
+        if (TOTDStr.Length > 0)
+            lines.InsertLast("TOTD: " + TOTDStr);
+        lines.InsertLast("Nb Players: " + NbPlayersStr);
+        lines.InsertLast("Worst Time: " + WorstTimeStr);
+        lines.InsertLast("TMX: " + TrackIDStr);
+        
+        // cant find a reliable way to get text width with imgui.. so let's make it full-width
+        dl.AddRectFilled(vec4(0, 80, Draw::GetWidth(), 50*lines.Length+20), vec4(0,0,0,0.75));
+        for (uint i = 0; i < lines.Length; i++) {
+            dl.AddText(vec2(100,100+(50*i)), vec4(1,1,1,1), lines[i], g_ImguiFont);    
+        }
+    }
+
     float HoverInterfaceScale = 0.5357;
     float HI_MaxCol1 = 64.0;
     float HI_MaxCol2 = 64.0;
@@ -597,11 +579,11 @@ class MapInfo_UI : MapInfo_Data {
 
         if (ThumbnailTexture !is null) {
             vec2 size = vec2(thumbnailHeight, thumbnailHeight);
-            vec2 tl = pos + vec2(fullWidth, 0) / 2.0 - vec2(size.x / 2.0, 0);
+            vec2 _tl = pos + vec2(fullWidth, 0) / 2.0 - vec2(size.x / 2.0, 0);
             nvg::ClosePath();
             nvg::BeginPath();
-            nvg::Rect(tl, size);
-            nvg::FillPaint(nvg::TexturePattern(tl, size, 0.0, ThumbnailTexture, 1.0));
+            nvg::Rect(_tl, size);
+            nvg::FillPaint(nvg::TexturePattern(_tl, size, 0.0, ThumbnailTexture, 1.0));
             nvg::Fill();
         }
 
