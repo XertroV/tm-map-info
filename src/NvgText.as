@@ -20,22 +20,41 @@ class NvgText {
         }
         for (uint i = startAt; i < parts.Length; i++) {
             if (parts[i].Length == 0) {
-                cols.InsertLast(vec3(-1, -1, -1));
+                cols.InsertLast(i == 0 ? vec3(-1, -1, -1) : cols[cols.Length - 1]);
                 continue;
             }
-            if (parts[i].SubStr(0, 1).ToLower() == "z") {
+            string firstChar = parts[i].SubStr(0, 1).ToLower();
+            if (IsASkipChar(firstChar[0])) {
+                parts[i] = parts[i].SubStr(1);
+                cols.InsertLast(i == 0 ? vec3(-1, -1, -1) : cols[cols.Length - 1]);
+                continue;
+            } else if (firstChar[0] == zChar) {
                 parts[i] = parts[i].SubStr(1);
                 cols.InsertLast(vec3(-1, -1, -1));
                 continue;
+            } else if (parts[i].Length < 4) {
+                parts[i] = "";
+                cols.InsertLast(i == 0 ? vec3(-1, -1, -1) : cols[cols.Length - 1]);
+                continue;
             }
+
             auto hex = parts[i].SubStr(0, 3);
             parts[i] = parts[i].SubStr(3);
             cols.InsertLast(hexTriToRgb(hex));
         }
     }
 
+    uint8 oChar = "o"[0];
+    uint8 zChar = "z"[0];
+    uint8 iChar = "i"[0];
+
+    bool IsASkipChar(uint8 char) {
+        return char == oChar || char == iChar;
+    }
+
     void Draw(vec2 pos, vec3 defaultCol, float fs, float alpha = 1.0) {
         float xOff = 0;
+        vec4 lastCol;
         for (uint i = 0; i < parts.Length; i++) {
             auto col = cols[i];
             if (col.x < 0) col = defaultCol;
