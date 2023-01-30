@@ -75,7 +75,7 @@ namespace TMX {
             warn("[status:" + req.ResponseCode() + "] Error getting map by UID from TMX: " + req.Error());
             return null;
         }
-        print(req.String());
+        // print("Debug tmx get map by uid: " + req.String());
         return Json::Parse(req.String());
     }
 }

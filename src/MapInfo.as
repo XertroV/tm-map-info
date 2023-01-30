@@ -1,6 +1,8 @@
 string currentMapUid;
 MapInfo_UI@ g_MapInfo = null;
 
+nvg::Texture@ tmDojoLogo = null;
+
 void CheckForNewMap() {
     CTrackMania@ app = cast<CTrackMania>(GetApp());
     string mapUid;
@@ -105,6 +107,10 @@ class MapInfo_Data {
     bool LoadedNbPlayers = false;
     bool LoadedWasTOTD = false;
 
+    int UploadedToTmDojo = -1;
+    Json::Value@ TmDojoData = null;
+    NvgButton@ TmDojoButton = null;
+
     MapInfo_Data() {
         auto map = GetApp().RootMap;
         if (map is null) throw("Cannot instantiate MapInfo_Data when RootMap is null.");
@@ -122,12 +128,14 @@ class MapInfo_Data {
         startnew(CoroutineFunc(this.GetMapInfoFromMapMonitorAPI));
         startnew(CoroutineFunc(this.GetMapTOTDStatus));
         startnew(CoroutineFunc(this.GetMapTMXStatus));
+        startnew(CoroutineFunc(this.GetMapTMDojoStatus));
         startnew(CoroutineFunc(this.MonitorRecordsVisibility));
     }
 
     bool OnMouseButton(bool down, int button) {
         return (TMXButton !is null && TMXButton.OnMouseClick(down, button))
             || (TMioButton !is null && TMioButton.OnMouseClick(down, button))
+            || (TmDojoButton !is null && TmDojoButton.OnMouseClick(down, button))
             // || (Button2 !is null && Button.OnMouseClick(down, button))
             ;
     }
@@ -217,7 +225,7 @@ class MapInfo_Data {
 
     void GetMapTMXStatus() {
         auto tmxTrack = TMX::GetMapFromUid(uid);
-        if (tmxTrack.GetType() == Json::Type::Object) {
+        if (tmxTrack !is null && tmxTrack.GetType() == Json::Type::Object) {
             UploadedToTMX = 1;
             TrackID = int(tmxTrack.Get('TrackID', -1));
             TrackIDStr = tostring(TrackID);
@@ -226,6 +234,17 @@ class MapInfo_Data {
         } else {
             UploadedToTMX = 0;
             TrackIDStr = "Not Uploaded";
+        }
+    }
+
+    void GetMapTMDojoStatus() {
+        auto tmDojoTrack = TmDojo::GetMapInfo(uid);
+        if (tmDojoTrack !is null && tmDojoTrack.GetType() == Json::Type::Object) {
+            UploadedToTmDojo = 1;
+            @TmDojoData = tmDojoTrack;
+            @TmDojoButton = NvgButton(vec4(1, 1, 1, .8), vec4(), CoroutineFunc(OnClickTMDojoButton));
+        } else {
+            UploadedToTmDojo = 0;
         }
     }
 
@@ -633,7 +652,23 @@ class MapInfo_UI : MapInfo_Data {
             pos = DrawDataLabels(pos, col, yStep, col2X, fs, "TOTD", TOTDStr);
         pos = DrawDataLabels(pos, col, yStep, col2X, fs, "# Finishes", NbPlayersStr);
         pos = DrawDataLabels(pos, col, yStep, col2X, fs, "Worst Time", WorstTimeStr);
+        auto tmxLinePos = pos - vec2(xPad, xPad / 2.0);
         pos = DrawDataLabels(pos, col, yStep, col2X, fs, "TMX", TrackIDStr, null, 1.0, TMXButton);
+        // tmdojo button is a square with xpad/2 padding around a square that's the same as the font size
+        vec2 dojoBtnSize = vec2(xPad + fs, xPad + fs);
+        float dojoBtnX = fullWidth - xPad - dojoBtnSize.x;
+        if (tmDojoLogo !is null && @TmDojoButton !is null && col2X + nvg::TextBounds(TrackIDStr).x + xPad < dojoBtnX) {
+            vec2 halfPad = vec2(xPad, xPad) / 2.;
+            vec2 dojoBtnTL = tmxLinePos + vec2(dojoBtnX, 0);
+            vec2 dojoTL = dojoBtnTL + halfPad;
+            vec2 dojoSize = vec2(fs, fs);
+            TmDojoButton.DrawButton(dojoTL, dojoSize, vec4(), halfPad, mainAnim.Progress);
+            nvg::BeginPath();
+            nvg::FillPaint(nvg::TexturePattern(dojoTL, dojoSize, 0, tmDojoLogo, 1.0));
+            nvg::Rect(dojoTL, dojoSize);
+            nvg::Fill();
+            nvg::ClosePath();
+        }
 
         /** ! to add a button, you need to
          * increment pos by the relevant height (it's the next position drawn at).

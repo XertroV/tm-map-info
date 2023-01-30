@@ -7,6 +7,7 @@ void Main() {
     startnew(ClearTaskCoro);
     startnew(TOTD::LoadTOTDs);
     startnew(MonitorUIVisible);
+    startnew(LoadTMDojoLogo);
 }
 
 bool _GameUIVisible = false;
@@ -15,6 +16,13 @@ void MonitorUIVisible() {
         sleep(100);
         _GameUIVisible = UI::IsGameUIVisible();
     }
+}
+
+void LoadTMDojoLogo() {
+    // if the game has been open for < 90s then wait a bit, no need to rush as soon as code is loaded
+    if (Time::Now < 90000)
+        sleep(20000);
+    @tmDojoLogo = nvg::LoadTexture("img/tmdojo_logo.png");
 }
 
 /** Called every frame. `dt` is the delta time (milliseconds since last frame).
