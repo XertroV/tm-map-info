@@ -249,7 +249,7 @@ class MapInfo_Data {
 
     void GetMapTMDojoStatus() {
         auto tmDojoTrack = TmDojo::GetMapInfo(uid);
-        if (tmDojoTrack !is null && tmDojoTrack.GetType() == Json::Type::Object) {
+        if (tmDojoTrack !is null && tmDojoTrack.GetType() == Json::Type::Object && tmDojoTrack.HasKey("author")) {
             UploadedToTmDojo = 1;
             @TmDojoData = tmDojoTrack;
             @TmDojoButton = NvgButton(vec4(1, 1, 1, .8), vec4(0,0,0,1), CoroutineFunc(OnClickTMDojoButton));

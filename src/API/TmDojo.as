@@ -10,8 +10,7 @@ namespace TmDojo {
             warn("[status:" + req.ResponseCode() + "] Error getting map by UID from TM Dojo: " + req.Error());
             return null;
         }
-        print("Debug tmdojo get map by uid: " + req.String());
+        // print("Debug tmdojo get map by uid: " + req.String());
         return Json::Parse(req.String());
     }
-
 }
