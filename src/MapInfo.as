@@ -456,8 +456,6 @@ class MapInfo_UI : MapInfo_Data {
             || cmap is null || !IsGoodUISequence(cmap.UI.UISequence)
             || pgcsa is null || pgcsa.IsInGameMenuDisplayed
             || (ps !is null && ps.StartTime > 2147483000)
-            // cost about 0.12 ms!
-            // || !UI::IsGameUIVisible()
             ;
         if (closed) {
             lastMapInfoSize = vec2();
