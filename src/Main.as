@@ -6,6 +6,15 @@ void Main() {
     if (S_ShowLoadingScreenInfo) @g_ImguiFont = UI::LoadFont("fonts/Montserrat-SemiBoldItalic.ttf", 40.f);
     startnew(ClearTaskCoro);
     startnew(TOTD::LoadTOTDs);
+    startnew(MonitorUIVisible);
+}
+
+bool _GameUIVisible = false;
+void MonitorUIVisible() {
+    while (true) {
+        sleep(100);
+        _GameUIVisible = UI::IsGameUIVisible();
+    }
 }
 
 /** Called every frame. `dt` is the delta time (milliseconds since last frame).
@@ -23,7 +32,6 @@ void Render() {
         if (loadProgress !is null && loadProgress.State != NGameLoadProgress_SMgr::EState::Disabled) {
             g_MapInfo.Draw_LoadingScreen();
         }
-
     }
 }
 

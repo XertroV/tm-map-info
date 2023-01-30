@@ -7,5 +7,5 @@ siteid = 320
 
 [script]
 dependencies = ["NadeoServices"]
-optional_dependencies = []
+# optional_dependencies = ["BetterLoadingScreen"]
 #__DEFINES__
