@@ -295,9 +295,11 @@ class MapInfo_Data {
 
     bool SettingsOpen() {
         auto vp = GetApp().Viewport;
-        if (vp.Overlays.Length < 11) return false;
+        if (vp.Overlays.Length < 3) return false;
         // 5 normally, report/key have 15 and 24; menu open has like 390
-        return vp.Overlays[10].m_CorpusVisibles.Length > 10;
+        // prior strat was satatic 10 but that doesn't work. (I had it at index 14 out of 17 total elements)
+        // note: overlay has sort order 14, mb filter on that
+        return vp.Overlays[vp.Overlays.Length - 3].m_CorpusVisibles.Length > 10;
     }
 
     bool ShouldDrawUI {
