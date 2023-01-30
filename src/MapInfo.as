@@ -2,6 +2,8 @@ string currentMapUid;
 MapInfo_UI@ g_MapInfo = null;
 
 nvg::Texture@ tmDojoLogo = null;
+nvg::Texture@ tmIOLogo = null;
+nvg::Texture@ tmxLogo = null;
 
 void CheckForNewMap() {
     CTrackMania@ app = cast<CTrackMania>(GetApp());
@@ -85,13 +87,16 @@ class MapInfo_Data {
     // -1 for loading, 0 for no, 1 for yes
     int UploadedToNadeo = -1;
     NvgButton@ TMioButton = null;
+    NvgButton@ TMioAuthorButton = null;
 
     int UploadedToTMX = -1;
+    int TMXAuthorID = -1;
     int TrackID = -1;
     string TrackIDStr = "...";
     // When `null`, there's no TMX info. It should never be Json::Type::Null.
     Json::Value@ TMX_Info = null;
     NvgButton@ TMXButton = null;
+    NvgButton@ TMXAuthorButton = null;
 
     uint NbPlayers = LoadingNbPlayersFlag;
     uint WorstTime = 0;
@@ -158,6 +163,7 @@ class MapInfo_Data {
         }
         UploadedToNadeo = 1;
         @TMioButton = NvgButton(vec4(1, 1, 1, .8), vec4(0, 0, 0, 1), CoroutineFunc(OnClickTMioButton));
+        @TMioAuthorButton = NvgButton(vec4(1, 1, 1, .8), vec4(0, 0, 0, 1), CoroutineFunc(OnClickTMioAuthorButton));
 
         AuthorAccountId = info.AuthorAccountId;
         AuthorDisplayName = info.AuthorDisplayName;
@@ -227,10 +233,12 @@ class MapInfo_Data {
         auto tmxTrack = TMX::GetMapFromUid(uid);
         if (tmxTrack !is null && tmxTrack.GetType() == Json::Type::Object) {
             UploadedToTMX = 1;
+            TMXAuthorID = int(tmxTrack.Get('UserID', -1));
             TrackID = int(tmxTrack.Get('TrackID', -1));
             TrackIDStr = tostring(TrackID);
             @TMX_Info = tmxTrack;
             @TMXButton = NvgButton(vec4(1, 1, 1, .8), vec4(0, 0, 0, 1), CoroutineFunc(this.OnClickTmxButton));
+            @TMXAuthorButton = NvgButton(vec4(1, 1, 1, .8), vec4(0, 0, 0, 1), CoroutineFunc(this.OnClickTmxAuthorButton));
         } else {
             UploadedToTMX = 0;
             TrackIDStr = "Not Uploaded";
@@ -252,8 +260,16 @@ class MapInfo_Data {
         OpenBrowserURL("https://trackmania.exchange/s/tr/" + TrackID);
     }
 
+    void OnClickTmxAuthorButton() {
+        OpenBrowserURL("https://trackmania.exchange/user/profile/" + TMXAuthorID);
+    }
+
     void OnClickTMioButton() {
         OpenBrowserURL("https://trackmania.io/#/leaderboard/" + uid);
+    }
+
+    void OnClickTMioAuthorButton() {
+        OpenBrowserURL("https://trackmania.io/#/player/" + AuthorWebServicesUserId);
     }
 
     void OnClickTMDojoButton() {
@@ -277,7 +293,7 @@ class MapInfo_Data {
     bool IsUIPopulated() {
         auto cmap = GetApp().Network.ClientManiaAppPlayground;
         auto cp = GetApp().CurrentPlayground;
-        if (cmap is null || cp is null || cp.UIConfigs.Length == 0) return false;
+        if (cmap is null || cp is null || cp.UIConfigs.Length == 0 || cmap.UI is null) return false;
         if (!IsGoodUISequence(cmap.UI.UISequence)) return false;
         auto nbUiLayers = cmap.UILayers.Length;
         // if the number of UI layers decreases it's probably due to a recovery restart, so we don't want to act on old references
@@ -369,6 +385,7 @@ class MapInfo_Data {
         trace('sleep');
         for (uint i = 0; i < 10; i++) yield();
         trace('assert safe');
+        yield();
         while (!IsSafeToCheckUI()) yield(); // throw("Should only happen if we exit the map super fast.");
         trace('find UI elements');
         while (IsSafeToCheckUI() && !FindUIElements()) {
@@ -637,37 +654,51 @@ class MapInfo_UI : MapInfo_Data {
         float alpha = .9;
         vec4 col = vec4(1, 1, 1, alpha);
 
-        // indent by xPad
-        vec2 pos = tl + vec2(xPad, textHOffset + xPad * 0.5);
+        // indent by xPad, add some y spacing. we use a vec4 here to get the return values for each column's width.
+        vec4 pos = vec4(tl.x + xPad, tl.y + textHOffset + xPad * 0.5, 0, 0);
 
         // ! update nbRows if you add more DrawDataLabels
 
-        pos = DrawDataLabels(pos, col, yStep, col2X, fs, "Name", CleanName, NvgName, alpha);
-        // pos = DrawDataLabels(pos, col, yStep, col2X, fs, "Name", CleanName);
-        pos = DrawDataLabels(pos, col, yStep, col2X, fs, "Author", AuthorDisplayName);
-        // pos = DrawDataLabels(pos, col, yStep, col2X, fs, "Author WSID", AuthorWebServicesUserId);
-        // pos = DrawDataLabels(pos, col, yStep, col2X, fs, "Author AcctID", AuthorAccountId);
-        pos = DrawDataLabels(pos, col, yStep, col2X, fs, "Published", DateStr, null, 1.0, TMioButton);
+        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Name", CleanName, NvgName, alpha);
+        // pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Name", CleanName);
+        vec2 authorBtnPos = pos.xy;
+        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Author", AuthorDisplayName, null, 1.0, TMioAuthorButton, tmIOLogo);
+        authorBtnPos += vec2(col2X + pos.w + xPad, -fs * 0.05);
+        // pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Author WSID", AuthorWebServicesUserId);
+        // pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Author AcctID", AuthorAccountId);
+        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Published", DateStr, null, 1.0, TMioButton, tmIOLogo);
         if (drawTotd)
-            pos = DrawDataLabels(pos, col, yStep, col2X, fs, "TOTD", TOTDStr);
-        pos = DrawDataLabels(pos, col, yStep, col2X, fs, "# Finishes", NbPlayersStr);
-        pos = DrawDataLabels(pos, col, yStep, col2X, fs, "Worst Time", WorstTimeStr);
-        auto tmxLinePos = pos - vec2(xPad, xPad / 2.0);
-        pos = DrawDataLabels(pos, col, yStep, col2X, fs, "TMX", TrackIDStr, null, 1.0, TMXButton);
+            pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "TOTD", TOTDStr);
+        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "# Finishes", NbPlayersStr);
+        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Worst Time", WorstTimeStr);
+
+        vec2 tmxLinePos = pos.xy; // + vec2(col2X + nvg::TextBounds(TrackIDStr).x + xPad, -fs * 0.05); // - vec2(xPad, xPad / 2.0);
+        const string tmxLineLabel = UploadedToTmDojo > 0 ? "TM{X,Dojo}" : "TMX";
+        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, tmxLineLabel, TrackIDStr, null, 1.0, TMXButton, tmxLogo);
+        tmxLinePos += vec2(col2X + pos.w + xPad, -fs * 0.05);
+
         // tmdojo button is a square with xpad/2 padding around a square that's the same as the font size
         vec2 dojoBtnSize = vec2(xPad + fs, xPad + fs);
         float dojoBtnX = fullWidth - xPad - dojoBtnSize.x;
-        if (tmDojoLogo !is null && @TmDojoButton !is null && col2X + nvg::TextBounds(TrackIDStr).x + xPad < dojoBtnX) {
-            vec2 halfPad = vec2(xPad, xPad) / 2.;
-            vec2 dojoBtnTL = tmxLinePos + vec2(dojoBtnX, 0);
-            vec2 dojoTL = dojoBtnTL + halfPad;
-            vec2 dojoSize = vec2(fs, fs);
-            TmDojoButton.DrawButton(dojoTL, dojoSize, vec4(), halfPad, mainAnim.Progress);
-            nvg::BeginPath();
-            nvg::FillPaint(nvg::TexturePattern(dojoTL, dojoSize, 0, tmDojoLogo, 1.0));
-            nvg::Rect(dojoTL, dojoSize);
-            nvg::Fill();
-            nvg::ClosePath();
+        vec2 halfPad = vec2(xPad, xPad) / 2.;
+        vec2 btnLogoSize = vec2(fs, fs);
+        float farRightBound = tl.x + fullWidth;
+        float btnSpaceNeeded = fs + xPad*2.0;
+        if (tmDojoLogo !is null && @TmDojoButton !is null && tmxLinePos.x + btnSpaceNeeded < farRightBound) {
+            TmDojoButton.DrawButton(tmxLinePos, btnLogoSize, vec4(), halfPad, mainAnim.Progress);
+            DrawTexture(tmxLinePos, btnLogoSize, tmDojoLogo, 1.0);
+        }
+
+        // if (tmIOLogo !is null && @TMioAuthorButton !is null && authorBtnPos.x + btnSpaceNeeded < farRightBound) {
+        //     TMioAuthorButton.DrawButton(authorBtnPos, btnLogoSize, vec4(), halfPad, mainAnim.Progress);
+        //     DrawTexture(authorBtnPos, btnLogoSize, tmIOLogo);
+        //     authorBtnPos.x += xPad + fs;
+        // }
+
+        if (tmxLogo !is null && @TMXAuthorButton !is null && authorBtnPos.x + btnSpaceNeeded < farRightBound) {
+            TMXAuthorButton.DrawButton(authorBtnPos, btnLogoSize, vec4(), halfPad, mainAnim.Progress);
+            DrawTexture(authorBtnPos, btnLogoSize, tmxLogo);
+            authorBtnPos.x += xPad + fs;
         }
 
         /** ! to add a button, you need to
@@ -691,7 +722,7 @@ class MapInfo_UI : MapInfo_Data {
 
         if (ThumbnailTexture !is null) {
             vec2 size = vec2(thumbnailHeight, thumbnailHeight);
-            vec2 _tl = pos + vec2(fullWidth, 0) / 2.0 - vec2(size.x / 2.0, 0);
+            vec2 _tl = pos.xy + vec2(fullWidth, 0) / 2.0 - vec2(size.x / 2.0, 0);
             nvg::ClosePath();
             nvg::BeginPath();
             nvg::Rect(_tl, size);
@@ -711,16 +742,23 @@ class MapInfo_UI : MapInfo_Data {
         nvg::Fill();
     }
 
-    vec2 DrawDataLabels(vec2 pos, vec4 col, float yStep, float col2X, float fs, const string &in label, const string &in value, NvgText@ textObj = null, float alpha = 1.0, NvgButton@ button = null) {
-        HI_MaxCol1 = Math::Max(nvg::TextBounds(label).x, HI_MaxCol1);
-        HI_MaxCol2 = Math::Max(nvg::TextBounds(value).x, HI_MaxCol2);
+    vec4 DrawDataLabels(vec2 pos, vec4 col, float yStep, float col2X, float fs, const string &in label, const string &in value, NvgText@ textObj = null, float alpha = 1.0, NvgButton@ button = null, nvg::Texture@ extraLogoForBtn = null) {
+        auto labelTB = nvg::TextBounds(label);
+        auto valueTB = nvg::TextBounds(value);
         nvg::FillColor(col);
         nvg::Text(pos, label);
         vec2 c2Pos = pos + vec2(col2X, 0);
-        vec2 c2Size = nvg::TextBounds(value);
+        vec2 c2Size = valueTB;
 
+        vec2 shapeOffs = vec2(0, c2Size.y * 0.05) * -1.0;
+
+        bool drawLogo = false;
         if (button !is null) {
-            button.DrawButton(c2Pos - vec2(0, c2Size.y * 0.05), c2Size, vec4(1, 1, 1, 1), vec2(xPad, xPad) / 2.0, mainAnim.Progress);
+            if (extraLogoForBtn !is null) {
+                c2Size.x += xPad / 2.0 + fs;
+                drawLogo = true;
+            }
+            button.DrawButton(c2Pos + shapeOffs, c2Size, vec4(1, 1, 1, 1), vec2(xPad, xPad) / 2.0, mainAnim.Progress);
         }
 
         if (textObj is null) {
@@ -728,8 +766,14 @@ class MapInfo_UI : MapInfo_Data {
         } else {
             textObj.Draw(c2Pos, vec3(1, 1, 1), fs, alpha);
         }
+        if (drawLogo) {
+            c2Pos.x += valueTB.x + xPad / 2.0;
+            DrawTexture(c2Pos + shapeOffs, vec2(fs, fs), extraLogoForBtn);
+        }
         pos.y += yStep;
-        return pos;
+        HI_MaxCol1 = Math::Max(labelTB.x, HI_MaxCol1);
+        HI_MaxCol2 = Math::Max(c2Size.x, HI_MaxCol2);
+        return vec4(pos.x, pos.y, labelTB.x, c2Size.x);
     }
 
 

@@ -3,11 +3,13 @@ int g_NvgFont = nvg::LoadFont("fonts/Montserrat-SemiBoldItalic.ttf", true, true)
 UI::Font@ g_ImguiFont;
 
 void Main() {
+    // wait a little on first load before we do stuff.
+    sleep(500);
     if (S_ShowLoadingScreenInfo) @g_ImguiFont = UI::LoadFont("fonts/Montserrat-SemiBoldItalic.ttf", 40.f);
     startnew(ClearTaskCoro);
     startnew(TOTD::LoadTOTDs);
     startnew(MonitorUIVisible);
-    startnew(LoadTMDojoLogo);
+    startnew(LoadTextures);
 }
 
 bool _GameUIVisible = false;
@@ -18,11 +20,16 @@ void MonitorUIVisible() {
     }
 }
 
-void LoadTMDojoLogo() {
+void LoadTextures() {
     // if the game has been open for < 90s then wait a bit, no need to rush as soon as code is loaded
     if (Time::Now < 90000)
         sleep(20000);
     @tmDojoLogo = nvg::LoadTexture("img/tmdojo_logo.png");
+    yield();
+    @tmIOLogo = nvg::LoadTexture("img/tmio_logo.png");
+    yield();
+    @tmxLogo = nvg::LoadTexture("img/tmx_logo.png");
+    trace('loaded textures');
 }
 
 /** Called every frame. `dt` is the delta time (milliseconds since last frame).
@@ -97,4 +104,13 @@ UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
             return UI::InputBlocking::Block;
     }
     return UI::InputBlocking::DoNothing;
+}
+
+
+void DrawTexture(vec2 pos, vec2 size, nvg::Texture@ tex, float alpha = 1.0) {
+    nvg::BeginPath();
+    nvg::FillPaint(nvg::TexturePattern(pos, size, 0, tex, alpha));
+    nvg::Rect(pos, size);
+    nvg::Fill();
+    nvg::ClosePath();
 }
