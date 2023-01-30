@@ -344,22 +344,26 @@ class MapInfo_Data {
     float slideFrameProgress = 1.0;
 
     private bool openedExploreNod = false;
+    private CGameManialinkControl@ slideFrame = null;
     private bool IsRecordElementVisible() {
         auto cmap = GetApp().Network.ClientManiaAppPlayground;
         if (cmap is null) return false;
-        if (lastRecordsLayerIndex >= cmap.UILayers.Length) return false;
-        auto layer = cmap.UILayers[lastRecordsLayerIndex];
-        if (layer is null) return false;
-        auto frame = cast<CGameManialinkFrame>(layer.LocalPage.GetFirstChild("frame-records"));
-        // should always be visible
-        if (frame is null || !frame.Visible) return false;
-        // if (!openedExploreNod) {
-        //     openedExploreNod = true;
-        //     ExploreNod(frame);
-        // }
-        if (frame.Controls.Length < 2) return false;
-        auto slideFrame = frame.Controls[1];
-        if (slideFrame.ControlId != "frame-slide") throw("should be slide-frame");
+        if (slideFrame is null) {
+            if (lastRecordsLayerIndex >= cmap.UILayers.Length) return false;
+            auto layer = cmap.UILayers[lastRecordsLayerIndex];
+            if (layer is null) return false;
+            auto frame = cast<CGameManialinkFrame>(layer.LocalPage.GetFirstChild("frame-records"));
+            // should always be visible
+            if (frame is null || !frame.Visible) return false;
+            // if (!openedExploreNod) {
+            //     openedExploreNod = true;
+            //     ExploreNod(frame);
+            // }
+            if (frame.Controls.Length < 2) return false;
+            @slideFrame = frame.Controls[1];
+            if (slideFrame.ControlId != "frame-slide") throw("should be slide-frame");
+        }
+        if (!slideFrame.Parent.Visible) return false;
         slideFrameProgress = (slideFrame.RelativePosition_V3.x + 61.0) / 61.0;
         return slideFrameProgress > 0.0;
     }

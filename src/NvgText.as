@@ -1,5 +1,10 @@
 /**
  * Parse a color string and provide a draw function so that we can draw colored text.
+ *
+ * Sometimes skips spaces. examples:
+ * 'once in a blue moon' 2022-10-04
+ * 'maobikzy -desert' 2022-10-14
+ * 'castello arcobaleno ft queen_clown' 2022-10-16
  */
 class NvgText {
     string[]@ parts;
