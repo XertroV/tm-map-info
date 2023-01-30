@@ -82,6 +82,7 @@ class MapInfo_Data {
 
     // -1 for loading, 0 for no, 1 for yes
     int UploadedToNadeo = -1;
+    NvgButton@ TMioButton = null;
 
     int UploadedToTMX = -1;
     int TrackID = -1;
@@ -126,6 +127,7 @@ class MapInfo_Data {
 
     bool OnMouseButton(bool down, int button) {
         return (TMXButton !is null && TMXButton.OnMouseClick(down, button))
+            || (TMioButton !is null && TMioButton.OnMouseClick(down, button))
             // || (Button2 !is null && Button.OnMouseClick(down, button))
             ;
     }
@@ -147,6 +149,7 @@ class MapInfo_Data {
             return;
         }
         UploadedToNadeo = 1;
+        @TMioButton = NvgButton(vec4(1, 1, 1, .8), vec4(0, 0, 0, 1), CoroutineFunc(OnClickTMioButton));
 
         AuthorAccountId = info.AuthorAccountId;
         AuthorDisplayName = info.AuthorDisplayName;
@@ -228,6 +231,14 @@ class MapInfo_Data {
 
     void OnClickTmxButton() {
         OpenBrowserURL("https://trackmania.exchange/s/tr/" + TrackID);
+    }
+
+    void OnClickTMioButton() {
+        OpenBrowserURL("https://trackmania.io/#/leaderboard/" + uid);
+    }
+
+    void OnClickTMDojoButton() {
+        OpenBrowserURL("https://tmdojo.com/maps/" + uid);
     }
 
     bool IsGoodUISequence(CGamePlaygroundUIConfig::EUISequence uiSeq) {
@@ -605,24 +616,24 @@ class MapInfo_UI : MapInfo_Data {
         HI_MaxCol2 = 0.0;
 
         float alpha = .9;
-        nvg::FillColor(vec4(1, 1, 1, alpha));
+        vec4 col = vec4(1, 1, 1, alpha);
 
         // indent by xPad
         vec2 pos = tl + vec2(xPad, textHOffset + xPad * 0.5);
 
         // ! update nbRows if you add more DrawDataLabels
 
-        pos = DrawDataLabels(pos, yStep, col2X, fs, "Name", CleanName, NvgName, alpha);
-        // pos = DrawDataLabels(pos, yStep, col2X, fs, "Name", CleanName);
-        pos = DrawDataLabels(pos, yStep, col2X, fs, "Author", AuthorDisplayName);
-        // pos = DrawDataLabels(pos, yStep, col2X, fs, "Author WSID", AuthorWebServicesUserId);
-        // pos = DrawDataLabels(pos, yStep, col2X, fs, "Author AcctID", AuthorAccountId);
-        pos = DrawDataLabels(pos, yStep, col2X, fs, "Published", DateStr);
+        pos = DrawDataLabels(pos, col, yStep, col2X, fs, "Name", CleanName, NvgName, alpha);
+        // pos = DrawDataLabels(pos, col, yStep, col2X, fs, "Name", CleanName);
+        pos = DrawDataLabels(pos, col, yStep, col2X, fs, "Author", AuthorDisplayName);
+        // pos = DrawDataLabels(pos, col, yStep, col2X, fs, "Author WSID", AuthorWebServicesUserId);
+        // pos = DrawDataLabels(pos, col, yStep, col2X, fs, "Author AcctID", AuthorAccountId);
+        pos = DrawDataLabels(pos, col, yStep, col2X, fs, "Published", DateStr, null, 1.0, TMioButton);
         if (drawTotd)
-            pos = DrawDataLabels(pos, yStep, col2X, fs, "TOTD", TOTDStr);
-        pos = DrawDataLabels(pos, yStep, col2X, fs, "Nb Players", NbPlayersStr);
-        pos = DrawDataLabels(pos, yStep, col2X, fs, "Worst Time", WorstTimeStr);
-        pos = DrawDataLabels(pos, yStep, col2X, fs, "TMX", TrackIDStr, null, 1.0, TMXButton);
+            pos = DrawDataLabels(pos, col, yStep, col2X, fs, "TOTD", TOTDStr);
+        pos = DrawDataLabels(pos, col, yStep, col2X, fs, "Nb Players", NbPlayersStr);
+        pos = DrawDataLabels(pos, col, yStep, col2X, fs, "Worst Time", WorstTimeStr);
+        pos = DrawDataLabels(pos, col, yStep, col2X, fs, "TMX", TrackIDStr, null, 1.0, TMXButton);
 
         /** ! to add a button, you need to
          * increment pos by the relevant height (it's the next position drawn at).
@@ -665,9 +676,10 @@ class MapInfo_UI : MapInfo_Data {
         nvg::Fill();
     }
 
-    vec2 DrawDataLabels(vec2 pos, float yStep, float col2X, float fs, const string &in label, const string &in value, NvgText@ textObj = null, float alpha = 1.0, NvgButton@ button = null) {
+    vec2 DrawDataLabels(vec2 pos, vec4 col, float yStep, float col2X, float fs, const string &in label, const string &in value, NvgText@ textObj = null, float alpha = 1.0, NvgButton@ button = null) {
         HI_MaxCol1 = Math::Max(nvg::TextBounds(label).x, HI_MaxCol1);
         HI_MaxCol2 = Math::Max(nvg::TextBounds(value).x, HI_MaxCol2);
+        nvg::FillColor(col);
         nvg::Text(pos, label);
         vec2 c2Pos = pos + vec2(col2X, 0);
         vec2 c2Size = nvg::TextBounds(value);
