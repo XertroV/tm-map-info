@@ -1,3 +1,6 @@
+// an obscure characture, used by nvg text to avoid mis-rendering spaces. should be about the size of a space.
+const string SPACE_CHAR = "`";
+
 /**
  * Parse a color string and provide a draw function so that we can draw colored text.
  *
@@ -11,7 +14,7 @@ class NvgText {
     vec3[] cols;
 
     NvgText(const string &in coloredText) {
-        auto preText = MakeColorsOkayDarkMode(ColoredString(StripNonColorFormatCodes(coloredText)));
+        auto preText = MakeColorsOkayDarkMode(ColoredString(StripNonColorFormatCodes(coloredText))).Replace(" ", SPACE_CHAR);
         @parts = preText.Split("\\$");
         uint startAt = 0;
         if (!preText.StartsWith("\\$")) {
@@ -63,7 +66,7 @@ class NvgText {
             // bool isWhitespace = parts[i].Length != 0 && parts[i].Replace(" ", "").Length == 0;
             bool isWhitespace = parts[i] == " ";
             auto xy = nvg::TextBounds(parts[i]);
-            nvg::Text(pos + vec2(xOff, 0), parts[i]);
+            nvg::Text(pos + vec2(xOff, 0), parts[i].Replace(SPACE_CHAR, " "));
             xOff += Math::Max(0.0, xy.x - fs / 7.0);
             if (isWhitespace) xOff += fs / 4.0;
         }
