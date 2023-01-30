@@ -79,3 +79,14 @@ void OnMouseMove(int x, int y) {
     g_MouseCoords.y = y;
     // trace('Updated mouse pos ' + Time::Now);
 }
+
+/** Called whenever a mouse button is pressed. `x` and `y` are the viewport coordinates.
+*/
+UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
+    OnMouseMove(x, y);
+    if (g_MapInfo !is null) {
+        if (g_MapInfo.OnMouseButton(down, button))
+            return UI::InputBlocking::Block;
+    }
+    return UI::InputBlocking::DoNothing;
+}

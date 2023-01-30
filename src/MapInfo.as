@@ -88,6 +88,7 @@ class MapInfo_Data {
     string TrackIDStr = "...";
     // When `null`, there's no TMX info. It should never be Json::Type::Null.
     Json::Value@ TMX_Info = null;
+    NvgButton@ TMXButton = null;
 
     uint NbPlayers = LoadingNbPlayersFlag;
     uint WorstTime = 0;
@@ -121,6 +122,12 @@ class MapInfo_Data {
         startnew(CoroutineFunc(this.GetMapTOTDStatus));
         startnew(CoroutineFunc(this.GetMapTMXStatus));
         startnew(CoroutineFunc(this.MonitorRecordsVisibility));
+    }
+
+    bool OnMouseButton(bool down, int button) {
+        return (TMXButton !is null && TMXButton.OnMouseClick(down, button))
+            // || (Button2 !is null && Button.OnMouseClick(down, button))
+            ;
     }
 
     void SetName(const string &in name) {
@@ -212,10 +219,15 @@ class MapInfo_Data {
             TrackID = int(tmxTrack.Get('TrackID', -1));
             TrackIDStr = tostring(TrackID);
             @TMX_Info = tmxTrack;
+            @TMXButton = NvgButton(vec4(1, 1, 1, .8), vec4(0, 0, 0, 1), CoroutineFunc(this.OnClickTmxButton));
         } else {
             UploadedToTMX = 0;
             TrackIDStr = "Not Uploaded";
         }
+    }
+
+    void OnClickTmxButton() {
+        OpenBrowserURL("https://trackmania.exchange/s/tr/" + TrackID);
     }
 
     bool IsGoodUISequence(CGamePlaygroundUIConfig::EUISequence uiSeq) {
@@ -433,6 +445,7 @@ class MapInfo_UI : MapInfo_Data {
     vec2 trOffs = vec2(topRightXOffs, topRightYOffs);
     vec2 screen = baseRes;
     vec4 bounds = vec4(-10);
+    float xPad = 20.;
 
     vec4 UpdateBounds() {
         screen = vec2(Draw::GetWidth(), Draw::GetHeight());
@@ -469,7 +482,7 @@ class MapInfo_UI : MapInfo_Data {
         auto rect = UpdateBounds();
 
         float fs = fontProp * screen.y;
-        float xPad = xPaddingProp * screen.y;
+        xPad = xPaddingProp * screen.y;
         float gap = gapProp * screen.y;
         string mainLabel = Icons::Users + " " + NbPlayersStr;
 
@@ -508,7 +521,7 @@ class MapInfo_UI : MapInfo_Data {
             || IsWithin(g_MouseCoords, rect.xy + vec2(rect.z + gap, 0), lastMapInfoSize);
             ;
         if (hoverAnim.Update(!closed && rawHover, slideFrameProgress)) {
-            DrawHoveredInterface(rect, fs, xPad, textHOffset, gap);
+            DrawHoveredInterface(rect, fs, textHOffset, gap);
         } else {
             lastMapInfoSize = vec2();
         }
@@ -555,7 +568,7 @@ class MapInfo_UI : MapInfo_Data {
     float HI_MaxCol2 = 64.0;
     vec2 lastMapInfoSize = vec2();
 
-    void DrawHoveredInterface(vec4 rect, float fs, float xPad, float textHOffset, float gap) {
+    void DrawHoveredInterface(vec4 rect, float fs, float textHOffset, float gap) {
         fs *= HoverInterfaceScale;
         xPad *= HoverInterfaceScale;
         textHOffset *= HoverInterfaceScale;
@@ -609,7 +622,7 @@ class MapInfo_UI : MapInfo_Data {
             pos = DrawDataLabels(pos, yStep, col2X, fs, "TOTD", TOTDStr);
         pos = DrawDataLabels(pos, yStep, col2X, fs, "Nb Players", NbPlayersStr);
         pos = DrawDataLabels(pos, yStep, col2X, fs, "Worst Time", WorstTimeStr);
-        pos = DrawDataLabels(pos, yStep, col2X, fs, "TMX", TrackIDStr);
+        pos = DrawDataLabels(pos, yStep, col2X, fs, "TMX", TrackIDStr, null, 1.0, TMXButton);
 
         /** ! to add a button, you need to
          * increment pos by the relevant height (it's the next position drawn at).
@@ -652,14 +665,21 @@ class MapInfo_UI : MapInfo_Data {
         nvg::Fill();
     }
 
-    vec2 DrawDataLabels(vec2 pos, float yStep, float col2X, float fs, const string &in label, const string &in value, NvgText@ textObj = null, float alpha = 1.0) {
+    vec2 DrawDataLabels(vec2 pos, float yStep, float col2X, float fs, const string &in label, const string &in value, NvgText@ textObj = null, float alpha = 1.0, NvgButton@ button = null) {
         HI_MaxCol1 = Math::Max(nvg::TextBounds(label).x, HI_MaxCol1);
         HI_MaxCol2 = Math::Max(nvg::TextBounds(value).x, HI_MaxCol2);
         nvg::Text(pos, label);
+        vec2 c2Pos = pos + vec2(col2X, 0);
+        vec2 c2Size = nvg::TextBounds(value);
+
+        if (button !is null) {
+            button.DrawButton(c2Pos - vec2(0, c2Size.y * 0.05), c2Size, vec4(1, 1, 1, 1), vec2(xPad, xPad) / 2.0, mainAnim.Progress);
+        }
+
         if (textObj is null)
-            nvg::Text(pos + vec2(col2X, 0), value);
+            nvg::Text(c2Pos, value);
         else
-            textObj.Draw(pos + vec2(col2X, 0), vec3(1, 1, 1), fs, alpha);
+            textObj.Draw(c2Pos, vec3(1, 1, 1), fs, alpha);
         pos.y += yStep;
         return pos;
     }
