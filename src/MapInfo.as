@@ -141,6 +141,8 @@ class MapInfo_Data {
         return (TMXButton !is null && TMXButton.OnMouseClick(down, button))
             || (TMioButton !is null && TMioButton.OnMouseClick(down, button))
             || (TmDojoButton !is null && TmDojoButton.OnMouseClick(down, button))
+            || (TMioAuthorButton !is null && TMioAuthorButton.OnMouseClick(down, button))
+            || (TMXAuthorButton !is null && TMXAuthorButton.OnMouseClick(down, button))
             // || (Button2 !is null && Button.OnMouseClick(down, button))
             ;
     }
@@ -250,7 +252,7 @@ class MapInfo_Data {
         if (tmDojoTrack !is null && tmDojoTrack.GetType() == Json::Type::Object) {
             UploadedToTmDojo = 1;
             @TmDojoData = tmDojoTrack;
-            @TmDojoButton = NvgButton(vec4(1, 1, 1, .8), vec4(), CoroutineFunc(OnClickTMDojoButton));
+            @TmDojoButton = NvgButton(vec4(1, 1, 1, .8), vec4(0,0,0,1), CoroutineFunc(OnClickTMDojoButton));
         } else {
             UploadedToTmDojo = 0;
         }

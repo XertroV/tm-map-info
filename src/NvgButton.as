@@ -1,7 +1,7 @@
 // augmentation for behavior in MapInfo_UI
 class NvgButton {
     CoroutineFunc@ onClick = null;
-    AnimMgr@ anim = AnimMgr();
+    AnimMgr@ anim = AnimMgr(false, 100.0);
     vec4 col;
     vec4 textHoverCol;
 
