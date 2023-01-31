@@ -32,9 +32,11 @@ void CheckForNewMap() {
 
 void OnNewMap() {
     if (currentMapUid.Length == 0) {
+        if (g_MapInfo !is null) g_MapInfo.Shutdown();
         @g_MapInfo = null;
         return;
     } else {
+        if (g_MapInfo !is null) g_MapInfo.Shutdown();
         @g_MapInfo = MapInfo_UI();
         trace("Instantiated map info");
     }
@@ -70,6 +72,8 @@ class MapInfo_Data {
     string RawName;
     string CleanName;
     NvgText@ NvgName;
+
+    protected bool SHUTDOWN = false;
 
     string AuthorAccountId = "";
     string AuthorDisplayName = "";
@@ -126,6 +130,10 @@ class MapInfo_Data {
         AuthorDisplayName = map.MapInfo.AuthorNickName;
 
         StartInitializationCoros();
+    }
+
+    void Shutdown() {
+        SHUTDOWN = true;
     }
 
     void StartInitializationCoros() {
@@ -199,12 +207,24 @@ class MapInfo_Data {
         @ThumbnailTexture = nvg::LoadTexture(req.Buffer());
     }
 
+    const string GetNbPlayersRange() {
+        // 100-200k
+        // 10-20k
+        // 20-30k
+        // subtract by 1 here so 100k -> 99,999 => log10(99999) = 4.99999 -> rounds to 4 -> 10**4 = 10k
+        float nDigits = Math::Log10(NbPlayers - 1);
+        int rangeDelta = 10 ** int(Math::Floor(nDigits));
+        auto lower = NbPlayers - rangeDelta;
+        return tostring(lower / 1000) + "-" + tostring(NbPlayers / 1000) + "k";
+    }
+
     void GetMapInfoFromMapMonitorAPI() {
         auto resp = MapMonitor::GetNbPlayersForMap(uid);
         NbPlayers = resp.Get('nb_players', 98765);
         WorstTime = resp.Get('last_highest_score', 0);
 
-        NbPlayersStr = NbPlayers >= 10000 && NbPlayers % 1000 == 0 ? tostring(NbPlayers / 1000) + "k" : tostring(NbPlayers);
+        NbPlayersStr = NbPlayers > 10000 && NbPlayers % 1000 == 0 ? GetNbPlayersRange() : tostring(NbPlayers);
+        // NbPlayersStrShort = NbPlayers > 10000 ? tostring(NbPlayers / 1000) + "k" : NbPlayersStr;
         WorstTimeStr = Time::Format(WorstTime);
 
         LoadedNbPlayers = true;
@@ -214,6 +234,8 @@ class MapInfo_Data {
         float refreshInSeconds = resp.Get('refresh_in', 150.0) + Math::Rand(0.0, 15.0);
         trace('Refreshing nb players in: (s) ' + refreshInSeconds);
         sleep(int(refreshInSeconds * 1000.0));
+        if (SHUTDOWN) return;
+        if (GetApp().RootMap is null || currentMapUid != uid) return;
         startnew(CoroutineFunc(this.GetMapInfoFromMapMonitorAPI));
         if (UploadedToNadeo == 0) { // check again in case of upload
             startnew(CoroutineFunc(this.GetMapInfoFromCoreAPI));
@@ -346,7 +368,7 @@ class MapInfo_Data {
         bool foundStart = false, foundEnd = false;
         for (uint i = cmap.UILayers.Length - 1; i > 1; i--) {
             auto layer = cmap.UILayers[i];
-            if (layer.ManialinkPage.Length == 0) continue;
+            if (layer.ManialinkPage.Length < 10) continue;
             string mlpage = string(layer.ManialinkPage.SubStr(0, 64)).Trim();
             if (mlpage.StartsWith('<manialink name="UIModule_Campaign_EndRaceMenu"')) {
                 foundEnd = true;
@@ -394,7 +416,18 @@ class MapInfo_Data {
             sleep(100);
         }
         trace('done checking ui. found: ' + lastRecordsLayerIndex);
-        while (true) {
+        yield();
+        trace('initial records element vis check');
+        yield();
+        isRecordsElementVisible = IsSafeToCheckUI();
+        trace('records element vis check, can proceed: ' + tostring(isRecordsElementVisible));
+        yield();
+        isRecordsElementVisible = isRecordsElementVisible && IsRecordElementVisible();
+        yield();
+        trace('records visible: ' + tostring(isRecordsElementVisible));
+        yield();
+
+        while (!SHUTDOWN) {
             yield();
             if (GetApp().RootMap is null || GetApp().RootMap.EdChallengeId != uid) break;
             isRecordsElementVisible = IsSafeToCheckUI() && IsRecordElementVisible();
@@ -461,6 +494,7 @@ class MapInfo_Data {
         if (layer.ManialinkPage.Length == 0) return false;
         trace('checking layer ML');
         // accessing ManialinkPageUtf8 in some cases might crash the game
+        if (layer.ManialinkPage.Length < 10) return false;
         return string(layer.ManialinkPage.SubStr(0, 127)).Trim().StartsWith('<manialink name="UIModule_Race_Record"');
     }
 
@@ -482,6 +516,7 @@ class MapInfo_UI : MapInfo_Data {
 
     vec2 baseRes = vec2(2560.0, 1440.0);
     float heightProp = 64.0 / baseRes.y;
+    float fullWidthProp = 400.0 / baseRes.y;
     float fontProp = 40.0 / baseRes.y;
     float xPaddingProp = 20.0 / baseRes.y;
     float gapProp = 8.0 / baseRes.y;
@@ -533,6 +568,9 @@ class MapInfo_UI : MapInfo_Data {
         float fs = fontProp * screen.y;
         xPad = xPaddingProp * screen.y;
         float gap = gapProp * screen.y;
+        // check max size assuming refresh-leadersboards exists
+        float recordsWidth = fullWidthProp * screen.y;
+        float maxTextSize = recordsWidth - (rect.w + gap + xPad) * 2.0;
         string mainLabel = Icons::Users + " " + NbPlayersStr;
 
         nvg::Reset();
@@ -542,10 +580,28 @@ class MapInfo_UI : MapInfo_Data {
         nvg::TextAlign(nvg::Align::Center | nvg::Align::Middle);
 
         auto textSize = nvg::TextBounds(mainLabel);
+        if (textSize.x > maxTextSize) {
+            fs *= maxTextSize / textSize.x;
+            nvg::FontSize(fs);
+            textSize = nvg::TextBounds(mainLabel);
+        }
+
         float width = xPad * 2.0 + textSize.x;
         rect.x -= width;
         rect.z = width;
         float textHOffset = rect.w * .55 - textSize.y / 2.0;
+
+        float ScreenHeight = Draw::GetHeight();
+        float ScreenWidth = Draw::GetWidth();
+        float ButtonPosX;
+
+        // DrawDebugRect(rect.xy + vec2(width - recordsWidth, 0), vec2(rect.w, rect.w));
+        // DrawDebugRect(rect.xy + vec2(width - recordsWidth + rect.w + gap, 0), vec2(rect.w, rect.w));
+        // DrawDebugRect(rect.xy + vec2(width - recordsWidth + (rect.w + gap) * 2.0, 0), vec2(rect.w, rect.w));
+        // float IdealWidth = Math::Min(ScreenWidth, ScreenHeight * 16.0 / 9.0);
+        // float AspectDiff = Math::Max(0.0, ScreenWidth / ScreenHeight - 16.0 / 9.0) / 2.0;
+        // ButtonPosX = (0.028 * IdealWidth + ScreenHeight * AspectDiff) / ScreenWidth;
+        // DrawDebugRect(vec2(ButtonPosX * ScreenWidth, rect.y), vec2(rect.w, rect.w));
 
         // animate sliding away when record UI opens/closes
         // first, set up a scissor similar to the records UI
@@ -557,7 +613,7 @@ class MapInfo_UI : MapInfo_Data {
         nvg::BeginPath();
         DrawBgRect(rect.xy, rect.zw);
 
-        nvg::FillColor(vec4(1.0));
+        nvg::FillColor(vec4(1.0, 1, 1, 1));
         nvg::Text(rect.xy + rect.zw * vec2(.5, .55), mainLabel);
 
         nvg::ClosePath();
@@ -671,7 +727,7 @@ class MapInfo_UI : MapInfo_Data {
         pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Published", DateStr, null, 1.0, TMioButton, tmIOLogo);
         if (drawTotd)
             pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "TOTD", TOTDStr);
-        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "# Finishes", NbPlayersStr);
+        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "# Finishes", NbPlayersStr + " (" + TodaysDate + ")");
         pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Worst Time", WorstTimeStr);
 
         vec2 tmxLinePos = pos.xy; // + vec2(col2X + nvg::TextBounds(TrackIDStr).x + xPad, -fs * 0.05); // - vec2(xPad, xPad / 2.0);
@@ -736,7 +792,13 @@ class MapInfo_UI : MapInfo_Data {
         nvg::ResetTransform();
     }
 
-
+    void DrawDebugRect(vec2 pos, vec2 size) {
+        nvg::BeginPath();
+        nvg::Rect(pos, size);
+        nvg::StrokeColor(vec4(1, .5, 0, 1));
+        nvg::Stroke();
+        nvg::ClosePath();
+    }
 
     void DrawBgRect(vec2 pos, vec2 size) {
         nvg::Rect(pos, size);

@@ -1,6 +1,6 @@
 // int g_NvgFont = nvg::LoadFont("fonts/Montserrat-BoldItalic.ttf", true, true);
 int g_NvgFont = nvg::LoadFont("fonts/Montserrat-SemiBoldItalic.ttf", true, true);
-UI::Font@ g_ImguiFont;
+UI::Font@ g_ImguiFont = UI::LoadFont("DroidSans.ttf", 26.0);
 
 void Main() {
     // wait a little on first load before we do stuff.
@@ -9,7 +9,15 @@ void Main() {
     startnew(ClearTaskCoro);
     startnew(TOTD::LoadTOTDs);
     startnew(MonitorUIVisible);
-    startnew(LoadTextures);
+    startnew(CacheTodaysDate);
+}
+
+string TodaysDate = "xxxx-xx-xx";
+void CacheTodaysDate() {
+    while (true) {
+        TodaysDate = FmtTimestampDateOnly(-1, false);
+        sleep(15000);
+    }
 }
 
 bool _GameUIVisible = false;
@@ -20,16 +28,13 @@ void MonitorUIVisible() {
     }
 }
 
+// load textures from within render loop when we need them.
 void LoadTextures() {
-    // if the game has been open for < 90s then wait a bit, no need to rush as soon as code is loaded
-    if (Time::Now < 90000)
-        sleep(20000);
+    trace("Loading textures...");
     @tmDojoLogo = nvg::LoadTexture("img/tmdojo_logo.png");
-    yield();
     @tmIOLogo = nvg::LoadTexture("img/tmio_logo.png");
-    yield();
     @tmxLogo = nvg::LoadTexture("img/tmx_logo.png");
-    trace('loaded textures');
+    trace("Loaded textures.");
 }
 
 /** Called every frame. `dt` is the delta time (milliseconds since last frame).
@@ -40,6 +45,9 @@ void Update(float dt) {
 
 void Render() {
     if (g_MapInfo !is null) {
+        // call once on first entering a map.
+        if (tmDojoLogo is null)
+            LoadTextures();
         g_MapInfo.Draw();
         // g_MapInfo.Draw_DebugUI();
 
@@ -62,16 +70,20 @@ void OnSettingsChanged() {
     if (S_ShowLoadingScreenInfo) @g_ImguiFont = UI::LoadFont("fonts/Montserrat-SemiBoldItalic.ttf", 40.f);
 }
 
-const string FmtTimestamp(uint64 timestamp) {
+const string FmtTimestamp(int64 timestamp) {
     // return Time::FormatString("%c", timestamp);
     return Time::FormatString("%Y-%m-%d (%a) %H:%M", timestamp);
 }
 
-const string FmtTimestampUTC(uint64 timestamp) {
+const string FmtTimestampUTC(int64 timestamp) {
     return Time::FormatStringUTC("%Y-%m-%d (%a) %H:%M", timestamp);
 }
 
-const string FmtTimestampDateOnlyUTC(uint64 timestamp) {
+const string FmtTimestampDateOnly(int64 timestamp = -1, bool withDay = true) {
+    return Time::FormatString(withDay ? "%Y-%m-%d (%a)" : "%Y-%m-%d", timestamp);
+}
+
+const string FmtTimestampDateOnlyUTC(int64 timestamp) {
     return Time::FormatStringUTC("%Y-%m-%d (%a)", timestamp);
 }
 
