@@ -1,6 +1,6 @@
 // int g_NvgFont = nvg::LoadFont("fonts/Montserrat-BoldItalic.ttf", true, true);
 int g_NvgFont = nvg::LoadFont("fonts/Montserrat-SemiBoldItalic.ttf", true, true);
-UI::Font@ g_ImguiFont;
+UI::Font@ g_ImguiFont = UI::LoadFont("DroidSans.ttf", 26.0);
 
 void Main() {
     if (Meta::GetPluginFromID("BetterLoadingScreen") !is null && S_ShowLoadingScreenInfo) {
@@ -11,6 +11,15 @@ void Main() {
     startnew(ClearTaskCoro);
     startnew(TOTD::LoadTOTDs);
     startnew(MonitorUIVisible);
+    startnew(CacheTodaysDate);
+}
+
+string TodaysDate = "xxxx-xx-xx";
+void CacheTodaysDate() {
+    while (true) {
+        TodaysDate = FmtTimestampDateOnly(-1, false);
+        sleep(15000);
+    }
 }
 
 bool _GameUIVisible = false;
@@ -21,6 +30,15 @@ void MonitorUIVisible() {
     }
 }
 
+// load textures from within render loop when we need them.
+void LoadTextures() {
+    trace("Loading textures...");
+    @tmDojoLogo = nvg::LoadTexture("img/tmdojo_logo.png");
+    @tmIOLogo = nvg::LoadTexture("img/tmio_logo.png");
+    @tmxLogo = nvg::LoadTexture("img/tmx_logo.png");
+    trace("Loaded textures.");
+}
+
 /** Called every frame. `dt` is the delta time (milliseconds since last frame).
 */
 void Update(float dt) {
@@ -29,8 +47,11 @@ void Update(float dt) {
 
 void Render() {
     if (g_MapInfo !is null) {
+        // call once on first entering a map.
+        if (tmDojoLogo is null)
+            LoadTextures();
         g_MapInfo.Draw();
-        // g_MapInfo.Draw_DebugUI();
+        if (S_ShowDebugUI) g_MapInfo.Draw_DebugUI();
 
         auto loadProgress = GetApp().LoadProgress;
         if (loadProgress !is null && loadProgress.State != NGameLoadProgress_SMgr::EState::Disabled) {
@@ -42,8 +63,12 @@ void Render() {
 const string MenuLabel = "\\$8f0" + Icons::Map + "\\$z " + Meta::ExecutingPlugin().Name;
 
 void RenderMenu() {
-    if(UI::MenuItem(MenuLabel, "", S_ShowMapInfo)) {
+    if (UI::MenuItem(MenuLabel, "", S_ShowMapInfo)) {
         S_ShowMapInfo = !S_ShowMapInfo;
+    }
+
+    if (S_ShowDebugMenuItem && UI::MenuItem(MenuLabel + " (Debug Window)", "", S_ShowDebugUI)) {
+        S_ShowDebugUI = !S_ShowDebugUI;
     }
 }
 
@@ -51,16 +76,20 @@ void OnSettingsChanged() {
     if (S_ShowLoadingScreenInfo) @g_ImguiFont = UI::LoadFont("fonts/Montserrat-SemiBoldItalic.ttf", 40.f);
 }
 
-const string FmtTimestamp(uint64 timestamp) {
+const string FmtTimestamp(int64 timestamp) {
     // return Time::FormatString("%c", timestamp);
     return Time::FormatString("%Y-%m-%d (%a) %H:%M", timestamp);
 }
 
-const string FmtTimestampUTC(uint64 timestamp) {
+const string FmtTimestampUTC(int64 timestamp) {
     return Time::FormatStringUTC("%Y-%m-%d (%a) %H:%M", timestamp);
 }
 
-const string FmtTimestampDateOnlyUTC(uint64 timestamp) {
+const string FmtTimestampDateOnly(int64 timestamp = -1, bool withDay = true) {
+    return Time::FormatString(withDay ? "%Y-%m-%d (%a)" : "%Y-%m-%d", timestamp);
+}
+
+const string FmtTimestampDateOnlyUTC(int64 timestamp) {
     return Time::FormatStringUTC("%Y-%m-%d (%a)", timestamp);
 }
 
@@ -82,4 +111,24 @@ void OnMouseMove(int x, int y) {
     g_MouseCoords.x = x;
     g_MouseCoords.y = y;
     // trace('Updated mouse pos ' + Time::Now);
+}
+
+/** Called whenever a mouse button is pressed. `x` and `y` are the viewport coordinates.
+*/
+UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
+    OnMouseMove(x, y);
+    if (g_MapInfo !is null) {
+        if (g_MapInfo.OnMouseButton(down, button))
+            return UI::InputBlocking::Block;
+    }
+    return UI::InputBlocking::DoNothing;
+}
+
+
+void DrawTexture(vec2 pos, vec2 size, nvg::Texture@ tex, float alpha = 1.0) {
+    nvg::BeginPath();
+    nvg::FillPaint(nvg::TexturePattern(pos, size, 0, tex, alpha));
+    nvg::Rect(pos, size);
+    nvg::Fill();
+    nvg::ClosePath();
 }

@@ -1,12 +1,21 @@
+// an obscure characture, used by nvg text to avoid mis-rendering spaces. should be about the size of a space.
+const string SPACE_CHAR = "|";
+
 /**
  * Parse a color string and provide a draw function so that we can draw colored text.
+ *
+ * Sometimes skips spaces. examples:
+ * 'once in a blue moon' 2022-10-04
+ * 'maobikzy -desert' 2022-10-14
+ * 'castello arcobaleno ft queen_clown' 2022-10-16
  */
 class NvgText {
     string[]@ parts;
     vec3[] cols;
 
     NvgText(const string &in coloredText) {
-        auto preText = MakeColorsOkayDarkMode(ColoredString(StripNonColorFormatCodes(coloredText)));
+        print(coloredText);
+        auto preText = MakeColorsOkayDarkMode(ColoredString((coloredText))).Replace(" ", SPACE_CHAR);
         @parts = preText.Split("\\$");
         uint startAt = 0;
         if (!preText.StartsWith("\\$")) {
@@ -14,19 +23,45 @@ class NvgText {
             cols.InsertLast(vec3(-1, -1, -1));
         }
         for (uint i = startAt; i < parts.Length; i++) {
+            print(parts[i]);
             if (parts[i].Length == 0) {
-                cols.InsertLast(vec3(-1, -1, -1));
+                cols.InsertLast(i == 0 ? vec3(-1, -1, -1) : cols[cols.Length - 1]);
                 continue;
             }
-            if (parts[i].SubStr(0, 1).ToLower() == "z") {
+            string firstChar = parts[i].SubStr(0, 1).ToLower();
+            if (firstChar[0] == zChar) {
                 parts[i] = parts[i].SubStr(1);
                 cols.InsertLast(vec3(-1, -1, -1));
                 continue;
+            } else if (IsASkipChar(firstChar[0]) || parts[i].Length == 1) {
+                parts[i] = parts[i].SubStr(1);
+                cols.InsertLast(i == 0 ? vec3(-1, -1, -1) : cols[cols.Length - 1]);
+                continue;
+            } else if (parts[i].Length < 4) {
+                parts[i] = "";
+                cols.InsertLast(i == 0 ? vec3(-1, -1, -1) : cols[cols.Length - 1]);
+                continue;
             }
+
             auto hex = parts[i].SubStr(0, 3);
             parts[i] = parts[i].SubStr(3);
+            // fix rendering of spaces at start of words -- move to prior word
+            while (i > 0 && parts[i].SubStr(0, 1) == SPACE_CHAR) {
+                parts[i - 1] += SPACE_CHAR;
+                parts[i] = parts[i].SubStr(1);
+            }
             cols.InsertLast(hexTriToRgb(hex));
         }
+        // cache the string value
+        ToString();
+    }
+
+    uint8 oChar = "o"[0];
+    uint8 zChar = "z"[0];
+    uint8 iChar = "i"[0];
+
+    bool IsASkipChar(uint8 char) {
+        return char == oChar || char == iChar || char == "<"[0] || char == ">"[0];
     }
 
     void Draw(vec2 pos, vec3 defaultCol, float fs, float alpha = 1.0) {
@@ -35,15 +70,25 @@ class NvgText {
             auto col = cols[i];
             if (col.x < 0) col = defaultCol;
             nvg::FillColor(vec4(col.x, col.y, col.z, alpha));
-            // the more complete whitespace check is more expensive. not sure how important this is.
-            // bool isWhitespace = parts[i].Length != 0 && parts[i].Replace(" ", "").Length == 0;
-            bool isWhitespace = parts[i] == " ";
             auto xy = nvg::TextBounds(parts[i]);
-            nvg::Text(pos + vec2(xOff, 0), parts[i]);
+            nvg::Text(pos + vec2(xOff, 0), parts[i].Replace(SPACE_CHAR, " "));
+            // nvg::Text(pos + vec2(xOff, 0), parts[i]);
             xOff += Math::Max(0.0, xy.x - fs / 7.0);
-            if (isWhitespace) xOff += fs / 4.0;
         }
         nvg::FillColor(vec4(defaultCol.x, defaultCol.y, defaultCol.z, alpha));
+    }
+
+    string _asStr;
+    const string ToString() {
+        if (_asStr.Length == 0) {
+            for (uint i = 0; i < parts.Length; i++) {
+                // auto item = parts[i];
+                _asStr += "$" + rgbToHexTri(cols[i].x < 0 ? vec3(1,1,1) : cols[i]);
+                _asStr += parts[i];
+            }
+            _asStr = _asStr.Replace(SPACE_CHAR, " ");
+        }
+        return _asStr;
     }
 }
 
@@ -70,8 +115,8 @@ uint8 HexCharToInt(int char) {
         if (v < 16) return v;
         return v - (97 - 65);    // a = 97 ascii
     }
-    throw("HexCharToInt got char with code " + char + " but that isn't 0-9 or a-f or A-F in ascii.");
-    return 0;
+    warn("HexCharToInt got char with code " + char + " but that isn't 0-9 or a-f or A-F in ascii.");
+    return 15;
 }
 
 vec3 hexTriToRgb(const string &in hexTri) {
@@ -173,7 +218,7 @@ vec3 rgbToHSL(vec3 rgb) {
 uint8 ToSingleHexCol(float v) {
     if (v < 0) { v = 0; }
     if (v > 15.9999) { v = 15.9999; }
-    int u = uint8(Math::Round(v));
+    int u = uint8(Math::Floor(v));
     if (u < 10) { return 48 + u; }  /* 48 = '0' */
     return 87 + u;  /* u>=10 and 97 = 'a' */
 }

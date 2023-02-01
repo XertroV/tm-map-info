@@ -2,7 +2,7 @@ const string MM_API_PROD_ROOT = "https://map-monitor.xk.io";
 const string MM_API_DEV_ROOT = "http://localhost:8000";
 
 #if DEV
-[Setting category="Debug" name="Local Dev Server"]
+[Setting category="[DEV] Debug" name="Local Dev Server"]
 bool S_LocalDev = true;
 #else
 bool S_LocalDev = false;

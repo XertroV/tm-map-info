@@ -1,6 +1,10 @@
 string currentMapUid;
 MapInfo_UI@ g_MapInfo = null;
 
+nvg::Texture@ tmDojoLogo = null;
+nvg::Texture@ tmIOLogo = null;
+nvg::Texture@ tmxLogo = null;
+
 void CheckForNewMap() {
     CTrackMania@ app = cast<CTrackMania>(GetApp());
     string mapUid;
@@ -11,7 +15,8 @@ void CheckForNewMap() {
     //     || app.Network.ClientManiaAppPlayground.Playground.Map is null
     //     ;
 
-    if (app.RootMap is null || app.Editor !is null) { // app.CurrentPlayground is null ||
+    // todo: check app.RootMap.MapInfo.IsPlayable corresponds to unvalidated maps
+    if (app.RootMap is null || !app.RootMap.MapInfo.IsPlayable || app.Editor !is null) { // app.CurrentPlayground is null ||
         mapUid = "";
     } else {
         mapUid = app.RootMap.MapInfo.MapUid;
@@ -28,9 +33,11 @@ void CheckForNewMap() {
 
 void OnNewMap() {
     if (currentMapUid.Length == 0) {
+        if (g_MapInfo !is null) g_MapInfo.Shutdown();
         @g_MapInfo = null;
         return;
     } else {
+        if (g_MapInfo !is null) g_MapInfo.Shutdown();
         @g_MapInfo = MapInfo_UI();
         trace("Instantiated map info");
     }
@@ -67,6 +74,8 @@ class MapInfo_Data {
     string CleanName;
     NvgText@ NvgName;
 
+    protected bool SHUTDOWN = false;
+
     string AuthorAccountId = "";
     string AuthorDisplayName = "";
     string AuthorWebServicesUserId = "";
@@ -82,12 +91,17 @@ class MapInfo_Data {
 
     // -1 for loading, 0 for no, 1 for yes
     int UploadedToNadeo = -1;
+    NvgButton@ TMioButton = null;
+    NvgButton@ TMioAuthorButton = null;
 
     int UploadedToTMX = -1;
+    int TMXAuthorID = -1;
     int TrackID = -1;
     string TrackIDStr = "...";
     // When `null`, there's no TMX info. It should never be Json::Type::Null.
     Json::Value@ TMX_Info = null;
+    NvgButton@ TMXButton = null;
+    NvgButton@ TMXAuthorButton = null;
 
     uint NbPlayers = LoadingNbPlayersFlag;
     uint WorstTime = 0;
@@ -103,16 +117,23 @@ class MapInfo_Data {
     bool LoadedNbPlayers = false;
     bool LoadedWasTOTD = false;
 
+    int UploadedToTmDojo = -1;
+    Json::Value@ TmDojoData = null;
+    NvgButton@ TmDojoButton = null;
+
     MapInfo_Data() {
         auto map = GetApp().RootMap;
         if (map is null) throw("Cannot instantiate MapInfo_Data when RootMap is null.");
         uid = map.EdChallengeId;
         SetName(map.MapName);
         author = map.AuthorNickName;
-
         AuthorDisplayName = map.MapInfo.AuthorNickName;
 
         StartInitializationCoros();
+    }
+
+    void Shutdown() {
+        SHUTDOWN = true;
     }
 
     void StartInitializationCoros() {
@@ -120,7 +141,18 @@ class MapInfo_Data {
         startnew(CoroutineFunc(this.GetMapInfoFromMapMonitorAPI));
         startnew(CoroutineFunc(this.GetMapTOTDStatus));
         startnew(CoroutineFunc(this.GetMapTMXStatus));
+        startnew(CoroutineFunc(this.GetMapTMDojoStatus));
         startnew(CoroutineFunc(this.MonitorRecordsVisibility));
+    }
+
+    bool OnMouseButton(bool down, int button) {
+        return (TMXButton !is null && TMXButton.OnMouseClick(down, button))
+            || (TMioButton !is null && TMioButton.OnMouseClick(down, button))
+            || (TmDojoButton !is null && TmDojoButton.OnMouseClick(down, button))
+            || (TMioAuthorButton !is null && TMioAuthorButton.OnMouseClick(down, button))
+            || (TMXAuthorButton !is null && TMXAuthorButton.OnMouseClick(down, button))
+            // || (Button2 !is null && Button.OnMouseClick(down, button))
+            ;
     }
 
     void SetName(const string &in name) {
@@ -140,10 +172,15 @@ class MapInfo_Data {
             return;
         }
         UploadedToNadeo = 1;
+        @TMioButton = NvgButton(vec4(1, 1, 1, .8), vec4(0, 0, 0, 1), CoroutineFunc(OnClickTMioButton));
+        @TMioAuthorButton = NvgButton(vec4(1, 1, 1, .8), vec4(0, 0, 0, 1), CoroutineFunc(OnClickTMioAuthorButton));
 
+        // these two are the same (2023-02-01)
         AuthorAccountId = info.AuthorAccountId;
-        AuthorDisplayName = info.AuthorDisplayName;
         AuthorWebServicesUserId = info.AuthorWebServicesUserId;
+        // Some campaign maps are authored by https://trackmania.io/#/player/nadeo and info.AuthorDisplayName isn't set for these maps.
+        if (info.AuthorDisplayName.Length > 0)
+            AuthorDisplayName = info.AuthorDisplayName;
 
         SetName(info.Name);
         FileName = info.FileName;
@@ -173,12 +210,24 @@ class MapInfo_Data {
         @ThumbnailTexture = nvg::LoadTexture(req.Buffer());
     }
 
+    const string GetNbPlayersRange() {
+        // 100-200k
+        // 10-20k
+        // 20-30k
+        // subtract by 1 here so 100k -> 99,999 => log10(99999) = 4.99999 -> rounds to 4 -> 10**4 = 10k
+        float nDigits = Math::Log10(NbPlayers - 1);
+        int rangeDelta = 10 ** int(Math::Floor(nDigits));
+        auto lower = NbPlayers - rangeDelta;
+        return tostring(lower / 1000) + "-" + tostring(NbPlayers / 1000) + "k";
+    }
+
     void GetMapInfoFromMapMonitorAPI() {
         auto resp = MapMonitor::GetNbPlayersForMap(uid);
         NbPlayers = resp.Get('nb_players', 98765);
         WorstTime = resp.Get('last_highest_score', 0);
 
-        NbPlayersStr = NbPlayers >= 10000 && NbPlayers % 1000 == 0 ? tostring(NbPlayers / 1000) + "k" : tostring(NbPlayers);
+        NbPlayersStr = NbPlayers > 10000 && NbPlayers % 1000 == 0 ? GetNbPlayersRange() : tostring(NbPlayers);
+        // NbPlayersStrShort = NbPlayers > 10000 ? tostring(NbPlayers / 1000) + "k" : NbPlayersStr;
         WorstTimeStr = Time::Format(WorstTime);
 
         LoadedNbPlayers = true;
@@ -188,6 +237,8 @@ class MapInfo_Data {
         float refreshInSeconds = resp.Get('refresh_in', 150.0) + Math::Rand(0.0, 15.0);
         trace('Refreshing nb players in: (s) ' + refreshInSeconds);
         sleep(int(refreshInSeconds * 1000.0));
+        if (SHUTDOWN) return;
+        if (GetApp().RootMap is null || currentMapUid != uid) return;
         startnew(CoroutineFunc(this.GetMapInfoFromMapMonitorAPI));
         if (UploadedToNadeo == 0) { // check again in case of upload
             startnew(CoroutineFunc(this.GetMapInfoFromCoreAPI));
@@ -207,15 +258,49 @@ class MapInfo_Data {
 
     void GetMapTMXStatus() {
         auto tmxTrack = TMX::GetMapFromUid(uid);
-        if (tmxTrack.GetType() == Json::Type::Object) {
+        if (tmxTrack !is null && tmxTrack.GetType() == Json::Type::Object) {
             UploadedToTMX = 1;
+            TMXAuthorID = int(tmxTrack.Get('UserID', -1));
             TrackID = int(tmxTrack.Get('TrackID', -1));
             TrackIDStr = tostring(TrackID);
             @TMX_Info = tmxTrack;
+            @TMXButton = NvgButton(vec4(1, 1, 1, .8), vec4(0, 0, 0, 1), CoroutineFunc(this.OnClickTmxButton));
+            @TMXAuthorButton = NvgButton(vec4(1, 1, 1, .8), vec4(0, 0, 0, 1), CoroutineFunc(this.OnClickTmxAuthorButton));
         } else {
             UploadedToTMX = 0;
             TrackIDStr = "Not Uploaded";
         }
+    }
+
+    void GetMapTMDojoStatus() {
+        auto tmDojoTrack = TmDojo::GetMapInfo(uid);
+        if (tmDojoTrack !is null && tmDojoTrack.GetType() == Json::Type::Object && tmDojoTrack.HasKey("author")) {
+            UploadedToTmDojo = 1;
+            @TmDojoData = tmDojoTrack;
+            @TmDojoButton = NvgButton(vec4(1, 1, 1, .8), vec4(0,0,0,1), CoroutineFunc(OnClickTMDojoButton));
+        } else {
+            UploadedToTmDojo = 0;
+        }
+    }
+
+    void OnClickTmxButton() {
+        OpenBrowserURL("https://trackmania.exchange/s/tr/" + TrackID);
+    }
+
+    void OnClickTmxAuthorButton() {
+        OpenBrowserURL("https://trackmania.exchange/user/profile/" + TMXAuthorID);
+    }
+
+    void OnClickTMioButton() {
+        OpenBrowserURL("https://trackmania.io/#/leaderboard/" + uid);
+    }
+
+    void OnClickTMioAuthorButton() {
+        OpenBrowserURL("https://trackmania.io/#/player/" + AuthorWebServicesUserId);
+    }
+
+    void OnClickTMDojoButton() {
+        OpenBrowserURL("https://tmdojo.com/maps/" + uid);
     }
 
     bool IsGoodUISequence(CGamePlaygroundUIConfig::EUISequence uiSeq) {
@@ -235,7 +320,7 @@ class MapInfo_Data {
     bool IsUIPopulated() {
         auto cmap = GetApp().Network.ClientManiaAppPlayground;
         auto cp = GetApp().CurrentPlayground;
-        if (cmap is null || cp is null || cp.UIConfigs.Length == 0) return false;
+        if (cmap is null || cp is null || cp.UIConfigs.Length == 0 || cmap.UI is null) return false;
         if (!IsGoodUISequence(cmap.UI.UISequence)) return false;
         auto nbUiLayers = cmap.UILayers.Length;
         // if the number of UI layers decreases it's probably due to a recovery restart, so we don't want to act on old references
@@ -286,7 +371,7 @@ class MapInfo_Data {
         bool foundStart = false, foundEnd = false;
         for (uint i = cmap.UILayers.Length - 1; i > 1; i--) {
             auto layer = cmap.UILayers[i];
-            if (layer.ManialinkPage.Length == 0) continue;
+            if (layer.ManialinkPage.Length < 10) continue;
             string mlpage = string(layer.ManialinkPage.SubStr(0, 64)).Trim();
             if (mlpage.StartsWith('<manialink name="UIModule_Campaign_EndRaceMenu"')) {
                 foundEnd = true;
@@ -321,19 +406,34 @@ class MapInfo_Data {
         trace('test populated');
         while (!IsUIPopulated()) yield();
         trace('test safe');
-        if (!IsSafeToCheckUI()) throw('unexpected');
+        if (!IsSafeToCheckUI()) {
+            warn("unexpectedly failed UI safety check. probably in the editor or something.");
+            return;
+        }
         trace('is safe');
         // once we detect things have started to load, wait another second
         trace('sleep');
         for (uint i = 0; i < 10; i++) yield();
         trace('assert safe');
+        yield();
         while (!IsSafeToCheckUI()) yield(); // throw("Should only happen if we exit the map super fast.");
         trace('find UI elements');
         while (IsSafeToCheckUI() && !FindUIElements()) {
             sleep(100);
         }
         trace('done checking ui. found: ' + lastRecordsLayerIndex);
-        while (true) {
+        yield();
+        trace('initial records element vis check');
+        yield();
+        isRecordsElementVisible = IsSafeToCheckUI();
+        trace('records element vis check, can proceed: ' + tostring(isRecordsElementVisible));
+        yield();
+        isRecordsElementVisible = isRecordsElementVisible && IsRecordElementVisible();
+        yield();
+        trace('records visible: ' + tostring(isRecordsElementVisible));
+        yield();
+
+        while (!SHUTDOWN) {
             yield();
             if (GetApp().RootMap is null || GetApp().RootMap.EdChallengeId != uid) break;
             isRecordsElementVisible = IsSafeToCheckUI() && IsRecordElementVisible();
@@ -344,22 +444,26 @@ class MapInfo_Data {
     float slideFrameProgress = 1.0;
 
     private bool openedExploreNod = false;
+    private CGameManialinkControl@ slideFrame = null;
     private bool IsRecordElementVisible() {
         auto cmap = GetApp().Network.ClientManiaAppPlayground;
         if (cmap is null) return false;
-        if (lastRecordsLayerIndex >= cmap.UILayers.Length) return false;
-        auto layer = cmap.UILayers[lastRecordsLayerIndex];
-        if (layer is null) return false;
-        auto frame = cast<CGameManialinkFrame>(layer.LocalPage.GetFirstChild("frame-records"));
-        // should always be visible
-        if (frame is null || !frame.Visible) return false;
-        // if (!openedExploreNod) {
-        //     openedExploreNod = true;
-        //     ExploreNod(frame);
-        // }
-        if (frame.Controls.Length < 2) return false;
-        auto slideFrame = frame.Controls[1];
-        if (slideFrame.ControlId != "frame-slide") throw("should be slide-frame");
+        if (slideFrame is null) {
+            if (lastRecordsLayerIndex >= cmap.UILayers.Length) return false;
+            auto layer = cmap.UILayers[lastRecordsLayerIndex];
+            if (layer is null) return false;
+            auto frame = cast<CGameManialinkFrame>(layer.LocalPage.GetFirstChild("frame-records"));
+            // should always be visible
+            if (frame is null || !frame.Visible) return false;
+            // if (!openedExploreNod) {
+            //     openedExploreNod = true;
+            //     ExploreNod(frame);
+            // }
+            if (frame.Controls.Length < 2) return false;
+            @slideFrame = frame.Controls[1];
+            if (slideFrame.ControlId != "frame-slide") throw("should be slide-frame");
+        }
+        if (!slideFrame.Parent.Visible) return false;
         slideFrameProgress = (slideFrame.RelativePosition_V3.x + 61.0) / 61.0;
         return slideFrameProgress > 0.0;
     }
@@ -396,6 +500,7 @@ class MapInfo_Data {
         if (layer.ManialinkPage.Length == 0) return false;
         trace('checking layer ML');
         // accessing ManialinkPageUtf8 in some cases might crash the game
+        if (layer.ManialinkPage.Length < 10) return false;
         return string(layer.ManialinkPage.SubStr(0, 127)).Trim().StartsWith('<manialink name="UIModule_Race_Record"');
     }
 
@@ -415,8 +520,12 @@ class MapInfo_UI : MapInfo_Data {
         super();
     }
 
+    // todo: we should be able to pull most of these values from the records UI widget.
+    // This would be good to do b/c some servers will change the size/location of the widget (e.g., i've seen a pyplanet server with this).
+
     vec2 baseRes = vec2(2560.0, 1440.0);
     float heightProp = 64.0 / baseRes.y;
+    float fullWidthProp = 400.0 / baseRes.y;
     float fontProp = 40.0 / baseRes.y;
     float xPaddingProp = 20.0 / baseRes.y;
     float gapProp = 8.0 / baseRes.y;
@@ -429,6 +538,7 @@ class MapInfo_UI : MapInfo_Data {
     vec2 trOffs = vec2(topRightXOffs, topRightYOffs);
     vec2 screen = baseRes;
     vec4 bounds = vec4(-10);
+    float xPad = 20.;
 
     vec4 UpdateBounds() {
         screen = vec2(Draw::GetWidth(), Draw::GetHeight());
@@ -465,8 +575,11 @@ class MapInfo_UI : MapInfo_Data {
         auto rect = UpdateBounds();
 
         float fs = fontProp * screen.y;
-        float xPad = xPaddingProp * screen.y;
+        xPad = xPaddingProp * screen.y;
         float gap = gapProp * screen.y;
+        // check max size assuming refresh-leadersboards exists
+        float recordsWidth = fullWidthProp * screen.y;
+        float maxTextSize = recordsWidth - (rect.w + gap + xPad) * 2.0;
         string mainLabel = Icons::Users + " " + NbPlayersStr;
 
         nvg::Reset();
@@ -476,10 +589,26 @@ class MapInfo_UI : MapInfo_Data {
         nvg::TextAlign(nvg::Align::Center | nvg::Align::Middle);
 
         auto textSize = nvg::TextBounds(mainLabel);
+        if (textSize.x > maxTextSize) {
+            // don't change the fs var here b/c it makes the text in the side pullout smaller
+            nvg::FontSize(fs * maxTextSize / textSize.x);
+            textSize = nvg::TextBounds(mainLabel);
+            // just set the max size to what we expect to get things pixel perfect.
+            textSize.x = maxTextSize;
+        }
+
         float width = xPad * 2.0 + textSize.x;
         rect.x -= width;
         rect.z = width;
         float textHOffset = rect.w * .55 - textSize.y / 2.0;
+
+        // DrawDebugRect(rect.xy + vec2(width - recordsWidth, 0), vec2(rect.w, rect.w));
+        // DrawDebugRect(rect.xy + vec2(width - recordsWidth + rect.w + gap, 0), vec2(rect.w, rect.w));
+        // DrawDebugRect(rect.xy + vec2(width - recordsWidth + (rect.w + gap) * 2.0, 0), vec2(rect.w, rect.w));
+        // float IdealWidth = Math::Min(ScreenWidth, ScreenHeight * 16.0 / 9.0);
+        // float AspectDiff = Math::Max(0.0, ScreenWidth / ScreenHeight - 16.0 / 9.0) / 2.0;
+        // ButtonPosX = (0.028 * IdealWidth + ScreenHeight * AspectDiff) / ScreenWidth;
+        // DrawDebugRect(vec2(ButtonPosX * ScreenWidth, rect.y), vec2(rect.w, rect.w));
 
         // animate sliding away when record UI opens/closes
         // first, set up a scissor similar to the records UI
@@ -491,7 +620,7 @@ class MapInfo_UI : MapInfo_Data {
         nvg::BeginPath();
         DrawBgRect(rect.xy, rect.zw);
 
-        nvg::FillColor(vec4(1.0));
+        nvg::FillColor(vec4(1.0, 1, 1, 1));
         nvg::Text(rect.xy + rect.zw * vec2(.5, .55), mainLabel);
 
         nvg::ClosePath();
@@ -504,7 +633,7 @@ class MapInfo_UI : MapInfo_Data {
             || IsWithin(g_MouseCoords, rect.xy + vec2(rect.z + gap, 0), lastMapInfoSize);
             ;
         if (hoverAnim.Update(!closed && rawHover, slideFrameProgress)) {
-            DrawHoveredInterface(rect, fs, xPad, textHOffset, gap);
+            DrawHoveredInterface(rect, fs, textHOffset, gap);
         } else {
             lastMapInfoSize = vec2();
         }
@@ -570,7 +699,7 @@ class MapInfo_UI : MapInfo_Data {
     float HI_MaxCol2 = 64.0;
     vec2 lastMapInfoSize = vec2();
 
-    void DrawHoveredInterface(vec4 rect, float fs, float xPad, float textHOffset, float gap) {
+    void DrawHoveredInterface(vec4 rect, float fs, float textHOffset, float gap) {
         fs *= HoverInterfaceScale;
         xPad *= HoverInterfaceScale;
         textHOffset *= HoverInterfaceScale;
@@ -607,24 +736,54 @@ class MapInfo_UI : MapInfo_Data {
         HI_MaxCol2 = 0.0;
 
         float alpha = .9;
-        nvg::FillColor(vec4(1, 1, 1, alpha));
+        vec4 col = vec4(1, 1, 1, alpha);
 
-        // indent by xPad
-        vec2 pos = tl + vec2(xPad, textHOffset + xPad * 0.5);
+        // indent by xPad, add some y spacing. we use a vec4 here to get the return values for each column's width.
+        vec4 pos = vec4(tl.x + xPad, tl.y + textHOffset + xPad * 0.5, 0, 0);
 
         // ! update nbRows if you add more DrawDataLabels
 
-        pos = DrawDataLabels(pos, yStep, col2X, fs, "Name", CleanName, NvgName, alpha);
-        // pos = DrawDataLabels(pos, yStep, col2X, fs, "Name", CleanName);
-        pos = DrawDataLabels(pos, yStep, col2X, fs, "Author", AuthorDisplayName);
-        // pos = DrawDataLabels(pos, yStep, col2X, fs, "Author WSID", AuthorWebServicesUserId);
-        // pos = DrawDataLabels(pos, yStep, col2X, fs, "Author AcctID", AuthorAccountId);
-        pos = DrawDataLabels(pos, yStep, col2X, fs, "Published", DateStr);
+        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Name", CleanName, NvgName, alpha);
+        // pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Name", CleanName);
+        vec2 authorBtnPos = pos.xy;
+        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Author", AuthorDisplayName, null, 1.0, TMioAuthorButton, tmIOLogo);
+        authorBtnPos += vec2(col2X + pos.w + xPad, -fs * 0.05);
+        // pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Author WSID", AuthorWebServicesUserId);
+        // pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Author AcctID", AuthorAccountId);
+        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Published", DateStr, null, 1.0, TMioButton, tmIOLogo);
         if (drawTotd)
-            pos = DrawDataLabels(pos, yStep, col2X, fs, "TOTD", TOTDStr);
-        pos = DrawDataLabels(pos, yStep, col2X, fs, "Nb Players", NbPlayersStr);
-        pos = DrawDataLabels(pos, yStep, col2X, fs, "Worst Time", WorstTimeStr);
-        pos = DrawDataLabels(pos, yStep, col2X, fs, "TMX", TrackIDStr);
+            pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "TOTD", TOTDStr);
+        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "# Finishes", NbPlayersStr + " (" + TodaysDate + ")");
+        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Worst Time", WorstTimeStr);
+
+        vec2 tmxLinePos = pos.xy; // + vec2(col2X + nvg::TextBounds(TrackIDStr).x + xPad, -fs * 0.05); // - vec2(xPad, xPad / 2.0);
+        const string tmxLineLabel = UploadedToTmDojo > 0 ? "TM{X,Dojo}" : "TMX";
+        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, tmxLineLabel, TrackIDStr, null, 1.0, TMXButton, tmxLogo);
+        tmxLinePos += vec2(col2X + pos.w + xPad, -fs * 0.05);
+
+        // tmdojo button is a square with xpad/2 padding around a square that's the same as the font size
+        vec2 dojoBtnSize = vec2(xPad + fs, xPad + fs);
+        float dojoBtnX = fullWidth - xPad - dojoBtnSize.x;
+        vec2 halfPad = vec2(xPad, xPad) / 2.;
+        vec2 btnLogoSize = vec2(fs, fs);
+        float farRightBound = tl.x + fullWidth;
+        float btnSpaceNeeded = fs + xPad*2.0;
+        if (tmDojoLogo !is null && @TmDojoButton !is null && tmxLinePos.x + btnSpaceNeeded < farRightBound) {
+            TmDojoButton.DrawButton(tmxLinePos, btnLogoSize, vec4(), halfPad, mainAnim.Progress);
+            DrawTexture(tmxLinePos, btnLogoSize, tmDojoLogo, 1.0);
+        }
+
+        // if (tmIOLogo !is null && @TMioAuthorButton !is null && authorBtnPos.x + btnSpaceNeeded < farRightBound) {
+        //     TMioAuthorButton.DrawButton(authorBtnPos, btnLogoSize, vec4(), halfPad, mainAnim.Progress);
+        //     DrawTexture(authorBtnPos, btnLogoSize, tmIOLogo);
+        //     authorBtnPos.x += xPad + fs;
+        // }
+
+        if (tmxLogo !is null && @TMXAuthorButton !is null && authorBtnPos.x + btnSpaceNeeded < farRightBound) {
+            TMXAuthorButton.DrawButton(authorBtnPos, btnLogoSize, vec4(), halfPad, mainAnim.Progress);
+            DrawTexture(authorBtnPos, btnLogoSize, tmxLogo);
+            authorBtnPos.x += xPad + fs;
+        }
 
         /** ! to add a button, you need to
          * increment pos by the relevant height (it's the next position drawn at).
@@ -647,7 +806,7 @@ class MapInfo_UI : MapInfo_Data {
 
         if (ThumbnailTexture !is null) {
             vec2 size = vec2(thumbnailHeight, thumbnailHeight);
-            vec2 _tl = pos + vec2(fullWidth, 0) / 2.0 - vec2(size.x / 2.0, 0);
+            vec2 _tl = pos.xy + vec2(fullWidth, 0) / 2.0 - vec2(size.x / 2.0, 0);
             nvg::ClosePath();
             nvg::BeginPath();
             nvg::Rect(_tl, size);
@@ -659,7 +818,13 @@ class MapInfo_UI : MapInfo_Data {
         nvg::ResetTransform();
     }
 
-
+    void DrawDebugRect(vec2 pos, vec2 size) {
+        nvg::BeginPath();
+        nvg::Rect(pos, size);
+        nvg::StrokeColor(vec4(1, .5, 0, 1));
+        nvg::Stroke();
+        nvg::ClosePath();
+    }
 
     void DrawBgRect(vec2 pos, vec2 size) {
         nvg::Rect(pos, size);
@@ -667,48 +832,136 @@ class MapInfo_UI : MapInfo_Data {
         nvg::Fill();
     }
 
-    vec2 DrawDataLabels(vec2 pos, float yStep, float col2X, float fs, const string &in label, const string &in value, NvgText@ textObj = null, float alpha = 1.0) {
-        HI_MaxCol1 = Math::Max(nvg::TextBounds(label).x, HI_MaxCol1);
-        HI_MaxCol2 = Math::Max(nvg::TextBounds(value).x, HI_MaxCol2);
+    vec4 DrawDataLabels(vec2 pos, vec4 col, float yStep, float col2X, float fs, const string &in label, const string &in value, NvgText@ textObj = null, float alpha = 1.0, NvgButton@ button = null, nvg::Texture@ extraLogoForBtn = null) {
+        auto labelTB = nvg::TextBounds(label);
+        auto valueTB = nvg::TextBounds(value);
+        nvg::FillColor(col);
         nvg::Text(pos, label);
-        if (textObj is null)
-            nvg::Text(pos + vec2(col2X, 0), value);
-        else
-            textObj.Draw(pos + vec2(col2X, 0), vec3(1, 1, 1), fs, alpha);
+        vec2 c2Pos = pos + vec2(col2X, 0);
+        vec2 c2Size = valueTB;
+
+        vec2 shapeOffs = vec2(0, c2Size.y * 0.05) * -1.0;
+
+        bool drawLogo = false;
+        if (button !is null) {
+            if (extraLogoForBtn !is null) {
+                c2Size.x += xPad / 2.0 + fs;
+                drawLogo = true;
+            }
+            button.DrawButton(c2Pos + shapeOffs, c2Size, vec4(1, 1, 1, 1), vec2(xPad, xPad) / 2.0, mainAnim.Progress);
+        }
+
+        if (textObj is null) {
+            nvg::Text(c2Pos, value);
+        } else {
+            textObj.Draw(c2Pos, vec3(1, 1, 1), fs, alpha);
+        }
+        if (drawLogo) {
+            c2Pos.x += valueTB.x + xPad / 2.0;
+            DrawTexture(c2Pos + shapeOffs, vec2(fs, fs), extraLogoForBtn);
+        }
         pos.y += yStep;
-        return pos;
+        HI_MaxCol1 = Math::Max(labelTB.x, HI_MaxCol1);
+        HI_MaxCol2 = Math::Max(c2Size.x, HI_MaxCol2);
+        return vec4(pos.x, pos.y, labelTB.x, c2Size.x);
     }
 
 
 
     void Draw_DebugUI() {
-        if (!S_ShowMapInfo) return;
+        if (!S_ShowDebugUI) return;
 
-        if (UI::Begin("\\$8f0" + Icons::Map + "\\$z Map Info " + uid, UI::WindowFlags::AlwaysAutoResize)) {
+        UI::SetNextWindowSize(800, 500, UI::Cond::FirstUseEver);
+        if (UI::Begin("\\$8f0" + Icons::Map + "\\$z Map Info -- Debug", S_ShowDebugUI, UI::WindowFlags::None)) {
+            if (UI::BeginTable("mapInfoDebug", 3, UI::TableFlags::SizingFixedFit)) {
+                UI::TableSetupColumn("key", UI::TableColumnFlags::WidthFixed);
+                UI::TableSetupColumn("value", UI::TableColumnFlags::WidthStretch);
+                UI::TableSetupColumn("copy", UI::TableColumnFlags::WidthFixed);
 
-            // shitty debug view for now
-            UI::BeginTable("mapInfoDebug", 2);
+                DebugTableRowStr("uid", uid);
+                DebugTableRowStr("author", author);
+                DebugTableRowStr("Name", Name);
+                DebugTableRowStr("RawName", RawName);
+                DebugTableRowStr("CleanName", CleanName);
+                DebugTableRowStr("NvgName", NvgName.ToString());
 
-            DebugUITableRow("Name:", Name);
-            DebugUITableRow("Author:", AuthorDisplayName);
-            DebugUITableRow("Author WSID:", AuthorWebServicesUserId);
-            DebugUITableRow("Author AcctID:", AuthorAccountId);
-            DebugUITableRow("Published:", DateStr);
-            DebugUITableRow("TOTD:", TOTDStr);
-            DebugUITableRow("Nb Players:", NbPlayersStr);
-            DebugUITableRow("Worst Time:", WorstTimeStr);
+                DebugTableRowStr("AuthorAccountId", AuthorAccountId);
+                DebugTableRowStr("AuthorDisplayName", AuthorDisplayName);
+                DebugTableRowStr("AuthorWebServicesUserId", AuthorWebServicesUserId);
+                DebugTableRowStr("FileName", FileName);
+                DebugTableRowStr("FileUrl", FileUrl);
+                DebugTableRowStr("ThumbnailUrl", ThumbnailUrl);
+                DebugTableRowUint("TimeStamp", TimeStamp);
+                DebugTableRowUint("AuthorScore", AuthorScore);
+                DebugTableRowUint("GoldScore", GoldScore);
+                DebugTableRowUint("SilverScore", SilverScore);
+                DebugTableRowUint("BronzeScore", BronzeScore);
+                DebugTableRowStr("DateStr", DateStr);
 
-            UI::EndTable();
+                DebugTableRowInt("UploadedToNadeo", UploadedToNadeo);
+                DebugTableRowButton("TMioButton", TMioButton);
+                DebugTableRowButton("TMioAuthorButton", TMioAuthorButton);
+
+                DebugTableRowInt("UploadedToTMX", UploadedToTMX);
+                DebugTableRowInt("TMXAuthorID", TMXAuthorID);
+                DebugTableRowInt("TrackID", TrackID);
+                DebugTableRowStr("TrackIDStr", TrackIDStr);
+
+                DebugTableRowJsonValueHandle("TMX_Info", TMX_Info);
+                DebugTableRowButton("TMXButton", TMXButton);
+                DebugTableRowButton("TMXAuthorButton", TMXAuthorButton);
+
+                DebugTableRowUint("NbPlayers", NbPlayers);
+                DebugTableRowUint("WorstTime", WorstTime);
+                DebugTableRowStr("NbPlayersStr", NbPlayersStr);
+                DebugTableRowStr("WorstTimeStr", WorstTimeStr);
+
+                DebugTableRowStr("TOTDDate", TOTDDate);
+                DebugTableRowInt("TOTDDaysAgo", TOTDDaysAgo);
+                DebugTableRowStr("TOTDStr", TOTDStr);
+
+                DebugTableRowUint("LoadingStartedAt", LoadingStartedAt);
+                DebugTableRowBool("LoadedMapData", LoadedMapData);
+                DebugTableRowBool("LoadedNbPlayers", LoadedNbPlayers);
+                DebugTableRowBool("LoadedWasTOTD", LoadedWasTOTD);
+
+                DebugTableRowInt("UploadedToTmDojo", UploadedToTmDojo);
+                DebugTableRowJsonValueHandle("TmDojoData", TmDojoData);
+                DebugTableRowButton("TmDojoButton", TmDojoButton);
+
+                UI::EndTable();
+            }
         }
         UI::End();
     }
 
-    void DebugUITableRow(const string &in key, const string &in value) {
+    void DebugTableRowStr(const string &in key, const string &in value) {
+        UI::PushID(key);
+
         UI::TableNextRow();
         UI::TableNextColumn();
         UI::Text(key);
         UI::TableNextColumn();
         UI::Text(value);
+        UI::TableNextColumn();
+        if (UI::Button(Icons::Clone)) IO::SetClipboard(value);
+
+        UI::PopID();
+    }
+    void DebugTableRowInt(const string &in key, const int &in value) {
+        DebugTableRowStr(key, tostring(value));
+    }
+    void DebugTableRowUint(const string &in key, const uint &in value) {
+        DebugTableRowStr(key, tostring(value));
+    }
+    void DebugTableRowBool(const string &in key, bool value) {
+        DebugTableRowStr(key, tostring(value));
+    }
+    void DebugTableRowButton(const string &in key, NvgButton@ btn) {
+        DebugTableRowStr(key, btn is null ? "null" : Text::Format("%.3f", btn.anim.Progress));
+    }
+    void DebugTableRowJsonValueHandle(const string &in key, Json::Value@ value) {
+        DebugTableRowStr(key, value is null ? "null" : Json::Write(value));
     }
 }
 
