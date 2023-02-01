@@ -590,14 +590,11 @@ class MapInfo_UI : MapInfo_Data {
             textSize = nvg::TextBounds(mainLabel);
         }
 
-        float width = xPad * 2.0 + textSize.x;
+        // subtract 1 from width to avoid drawing 1 too many pixles when reducing the size b/c text is too large.
+        float width = xPad * 2.0 + textSize.x - 1.;
         rect.x -= width;
         rect.z = width;
         float textHOffset = rect.w * .55 - textSize.y / 2.0;
-
-        float ScreenHeight = Draw::GetHeight();
-        float ScreenWidth = Draw::GetWidth();
-        float ButtonPosX;
 
         // DrawDebugRect(rect.xy + vec2(width - recordsWidth, 0), vec2(rect.w, rect.w));
         // DrawDebugRect(rect.xy + vec2(width - recordsWidth + rect.w + gap, 0), vec2(rect.w, rect.w));
