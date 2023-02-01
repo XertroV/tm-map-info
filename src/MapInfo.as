@@ -15,7 +15,8 @@ void CheckForNewMap() {
     //     || app.Network.ClientManiaAppPlayground.Playground.Map is null
     //     ;
 
-    if (app.RootMap is null || app.Editor !is null) { // app.CurrentPlayground is null ||
+    // todo: check app.RootMap.MapInfo.IsPlayable corresponds to unvalidated maps
+    if (app.RootMap is null || !app.RootMap.MapInfo.IsPlayable || app.Editor !is null) { // app.CurrentPlayground is null ||
         mapUid = "";
     } else {
         mapUid = app.RootMap.MapInfo.MapUid;
@@ -403,7 +404,10 @@ class MapInfo_Data {
         trace('test populated');
         while (!IsUIPopulated()) yield();
         trace('test safe');
-        if (!IsSafeToCheckUI()) throw('unexpected');
+        if (!IsSafeToCheckUI()) {
+            warn("unexpectedly failed UI safety check. probably in the editor or something.");
+            return;
+        }
         trace('is safe');
         // once we detect things have started to load, wait another second
         trace('sleep');
