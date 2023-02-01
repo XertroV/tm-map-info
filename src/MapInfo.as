@@ -668,10 +668,11 @@ class MapInfo_UI : MapInfo_Data {
         lines.InsertLast("Worst Time: " + WorstTimeStr);
         lines.InsertLast("TMX: " + TrackIDStr);
 
-        // we only use imgui drawList if we have to (BLS installed), otherwise use nvg for performance        
+        // we only use imgui drawList if we have to (BLS installed), otherwise use nvg for performance
         if (Meta::GetPluginFromID("BetterLoadingScreen") !is null) {
             dl.AddRectFilled(vec4(0, 160, Draw::GetWidth(), 50*lines.Length+20), vec4(0,0,0,0.75));
         } else {
+            // DrawBgRect()
             nvg::FillColor(vec4(0,0,0,0.75));
             nvg::BeginPath();
             nvg::Rect(vec2(0,160), vec2(Draw::GetWidth(), 50*lines.Length+20));
@@ -684,7 +685,7 @@ class MapInfo_UI : MapInfo_Data {
             nvg::FontSize(40);
         }
 
-        
+
         for (uint i = 0; i < lines.Length; i++) {
             if (Meta::GetPluginFromID("BetterLoadingScreen") !is null) {
                 dl.AddText(vec2(100,180+(50*i)), vec4(1,1,1,1), lines[i], g_ImguiFont);

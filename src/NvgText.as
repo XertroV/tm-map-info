@@ -56,12 +56,13 @@ class NvgText {
         ToString();
     }
 
+    uint8 sChar = "s"[0];
     uint8 oChar = "o"[0];
     uint8 zChar = "z"[0];
     uint8 iChar = "i"[0];
 
     bool IsASkipChar(uint8 char) {
-        return char == oChar || char == iChar || char == "<"[0] || char == ">"[0];
+        return char == oChar || char == iChar || char == sChar || char == "<"[0] || char == ">"[0];
     }
 
     void Draw(vec2 pos, vec3 defaultCol, float fs, float alpha = 1.0) {
