@@ -4,7 +4,14 @@ MapInfo_UI@ g_MapInfo = null;
 void CheckForNewMap() {
     CTrackMania@ app = cast<CTrackMania>(GetApp());
     string mapUid;
-    if (app.CurrentPlayground is null || app.RootMap is null || app.Editor !is null) {
+
+    // bool rmNull = app.RootMap is null;
+    // bool cmapPgMapNull = app.Network.ClientManiaAppPlayground is null
+    //     || app.Network.ClientManiaAppPlayground.Playground is null
+    //     || app.Network.ClientManiaAppPlayground.Playground.Map is null
+    //     ;
+
+    if (app.RootMap is null || app.Editor !is null) { // app.CurrentPlayground is null ||
         mapUid = "";
     } else {
         mapUid = app.RootMap.MapInfo.MapUid;
@@ -12,7 +19,8 @@ void CheckForNewMap() {
 
     if(mapUid != currentMapUid) {
         currentMapUid = mapUid;
-        startnew(OnNewMap);
+        // startnew(OnNewMap);
+        OnNewMap();
     }
 }
 
@@ -24,9 +32,10 @@ void OnNewMap() {
         return;
     } else {
         @g_MapInfo = MapInfo_UI();
+        trace("Instantiated map info");
     }
-    CGameCtnChallenge@ map = GetApp().RootMap;
-    if (map is null) return;
+    // CGameCtnChallenge@ map = GetApp().RootMap;
+    // if (map is null) return;
 }
 
 bool isOnNadeoServices = false;
@@ -112,7 +121,6 @@ class MapInfo_Data {
         startnew(CoroutineFunc(this.GetMapTOTDStatus));
         startnew(CoroutineFunc(this.GetMapTMXStatus));
         startnew(CoroutineFunc(this.MonitorRecordsVisibility));
-        startnew(CoroutineFunc(this.MonitorUIVisibility));
     }
 
     void SetName(const string &in name) {
@@ -217,6 +225,12 @@ class MapInfo_Data {
             ;
     }
 
+    bool IsUISequencePlayingOrFinish(CGamePlaygroundUIConfig::EUISequence uiSeq) {
+        return uiSeq == CGamePlaygroundUIConfig::EUISequence::Playing
+            || uiSeq == CGamePlaygroundUIConfig::EUISequence::Finish
+            ;
+    }
+
     private uint lastNbUilayers = 0;
     bool IsUIPopulated() {
         auto cmap = GetApp().Network.ClientManiaAppPlayground;
@@ -250,18 +264,60 @@ class MapInfo_Data {
 
     bool SettingsOpen() {
         auto vp = GetApp().Viewport;
-        if (vp.Overlays.Length < 11) return false;
+        if (vp.Overlays.Length < 3) return false;
         // 5 normally, report/key have 15 and 24; menu open has like 390
-        return vp.Overlays[10].m_CorpusVisibles.Length > 10;
+        // prior strat was satatic 10 but that doesn't work. (I had it at index 14 out of 17 total elements)
+        // note: overlay has sort order 14, mb filter on that
+        return vp.Overlays[vp.Overlays.Length - 3].m_CorpusVisibles.Length > 10;
+    }
+
+    // pretty expensive when layers are checked (1.3ms ish)
+    // but caching the manialink controls seems fine
+    CGameManialinkControl@ soloStartMenuFrame = null;
+    CGameManialinkControl@ soloEndMenuFrame = null;
+    bool SoloMenuOpen() {
+        if (GetApp().PlaygroundScript is null) return false;
+        auto cmap = GetApp().Network.ClientManiaAppPlayground;
+        if (cmap is null || cmap.UILayers.Length < 2) return false;
+        if (IsUISequencePlayingOrFinish(cmap.UI.UISequence)) return false;
+        if (soloEndMenuFrame !is null && soloStartMenuFrame !is null) {
+            return soloStartMenuFrame.Visible || soloEndMenuFrame.Visible;
+        }
+        bool foundStart = false, foundEnd = false;
+        for (uint i = cmap.UILayers.Length - 1; i > 1; i--) {
+            auto layer = cmap.UILayers[i];
+            if (layer.ManialinkPage.Length == 0) continue;
+            string mlpage = string(layer.ManialinkPage.SubStr(0, 64)).Trim();
+            if (mlpage.StartsWith('<manialink name="UIModule_Campaign_EndRaceMenu"')) {
+                foundEnd = true;
+                try {
+                    @soloEndMenuFrame = cast<CGameManialinkFrame>(layer.LocalPage.MainFrame.Controls[0]).Controls[0];
+                    if (soloEndMenuFrame.Visible) return true;
+                } catch {}
+            }
+            if (mlpage.StartsWith('<manialink name="UIModule_Campaign_StartRaceMenu"')) {
+                foundStart = true;
+                try {
+                    @soloStartMenuFrame = cast<CGameManialinkFrame>(layer.LocalPage.MainFrame.Controls[0]).Controls[0];
+                    if (soloStartMenuFrame.Visible) return true;
+                } catch {}
+            }
+            if (foundEnd && foundStart) return false;
+        }
+        return false;
     }
 
     bool ShouldDrawUI {
         get {
-            return UI::IsGameUIVisible() && isRecordsElementVisible && !ScoreTableVisible() && !SettingsOpen();
+            return _GameUIVisible && isRecordsElementVisible
+                && !ScoreTableVisible() && !SettingsOpen()
+                && !SoloMenuOpen()
+                ;
         }
     }
     private bool isRecordsElementVisible = false;
     private void MonitorRecordsVisibility() {
+        // these traces are to help investigate crashes -- can be commented later for production (or we could make a loglevel thing so ppl can turn them back on if they get crashes)
         trace('test populated');
         while (!IsUIPopulated()) yield();
         trace('test safe');
@@ -283,18 +339,6 @@ class MapInfo_Data {
             isRecordsElementVisible = IsSafeToCheckUI() && IsRecordElementVisible();
         }
         trace('exited');
-    }
-
-    protected bool _GameUIVisible = false;
-    private void MonitorUIVisibility() {
-        while (true) {
-            yield();
-            yield();
-            yield();
-            yield();
-            yield();
-            _GameUIVisible = UI::IsGameUIVisible();
-        }
     }
 
     float slideFrameProgress = 1.0;
@@ -412,8 +456,6 @@ class MapInfo_UI : MapInfo_Data {
             || cmap is null || !IsGoodUISequence(cmap.UI.UISequence)
             || pgcsa is null || pgcsa.IsInGameMenuDisplayed
             || (ps !is null && ps.StartTime > 2147483000)
-            // cost about 0.12 ms!
-            // || !UI::IsGameUIVisible()
             ;
         if (closed) {
             lastMapInfoSize = vec2();
@@ -469,6 +511,15 @@ class MapInfo_UI : MapInfo_Data {
     }
 
     void Draw_LoadingScreen() {
+        // nvg test code at the begining to help test when this function was being called. can be removed
+        // screen = vec2(Draw::GetWidth(), Draw::GetHeight());
+        // nvg::Reset();
+        // nvg::BeginPath();
+        // nvg::Rect(screen / 4., screen / 2.);
+        // nvg::FillColor(vec4(0, 0, 0, .5));
+        // nvg::Fill();
+        // nvg::ClosePath();
+
         if (!S_ShowLoadingScreenInfo) return;
 
         // have to use imgui to draw atop better loading screen

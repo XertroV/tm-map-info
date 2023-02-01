@@ -10,6 +10,15 @@ void Main() {
     }
     startnew(ClearTaskCoro);
     startnew(TOTD::LoadTOTDs);
+    startnew(MonitorUIVisible);
+}
+
+bool _GameUIVisible = false;
+void MonitorUIVisible() {
+    while (true) {
+        sleep(100);
+        _GameUIVisible = UI::IsGameUIVisible();
+    }
 }
 
 /** Called every frame. `dt` is the delta time (milliseconds since last frame).
@@ -27,7 +36,6 @@ void Render() {
         if (loadProgress !is null && loadProgress.State != NGameLoadProgress_SMgr::EState::Disabled) {
             g_MapInfo.Draw_LoadingScreen();
         }
-
     }
 }
 
