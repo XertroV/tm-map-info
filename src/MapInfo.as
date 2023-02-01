@@ -668,10 +668,29 @@ class MapInfo_UI : MapInfo_Data {
         lines.InsertLast("Worst Time: " + WorstTimeStr);
         lines.InsertLast("TMX: " + TrackIDStr);
 
-        // cant find a reliable way to get text width with imgui.. so let's make it full-width
-        dl.AddRectFilled(vec4(0, 80, Draw::GetWidth(), 50*lines.Length+20), vec4(0,0,0,0.75));
+        // we only use imgui drawList if we have to (BLS installed), otherwise use nvg for performance        
+        if (Meta::GetPluginFromID("BetterLoadingScreen") !is null) {
+            dl.AddRectFilled(vec4(0, 160, Draw::GetWidth(), 50*lines.Length+20), vec4(0,0,0,0.75));
+        } else {
+            nvg::FillColor(vec4(0,0,0,0.75));
+            nvg::BeginPath();
+            nvg::Rect(vec2(0,160), vec2(Draw::GetWidth(), 50*lines.Length+20));
+            nvg::Fill();
+
+            // text stuff for later, might as well run it here so its not wasting resources when BLS is installed
+            nvg::TextAlign(nvg::Align::Top | nvg::Align::Left);
+            nvg::FillColor(vec4(1,1,1,1));
+            nvg::FontFace(g_NvgFont);
+            nvg::FontSize(40);
+        }
+
+        
         for (uint i = 0; i < lines.Length; i++) {
-            dl.AddText(vec2(100,100+(50*i)), vec4(1,1,1,1), lines[i], g_ImguiFont);
+            if (Meta::GetPluginFromID("BetterLoadingScreen") !is null) {
+                dl.AddText(vec2(100,180+(50*i)), vec4(1,1,1,1), lines[i], g_ImguiFont);
+            } else {
+                nvg::Text(vec2(100,180+(50*i)), lines[i]);
+            }
         }
     }
 
