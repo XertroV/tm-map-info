@@ -127,7 +127,6 @@ class MapInfo_Data {
         uid = map.EdChallengeId;
         SetName(map.MapName);
         author = map.AuthorNickName;
-
         AuthorDisplayName = map.MapInfo.AuthorNickName;
 
         StartInitializationCoros();
@@ -176,9 +175,12 @@ class MapInfo_Data {
         @TMioButton = NvgButton(vec4(1, 1, 1, .8), vec4(0, 0, 0, 1), CoroutineFunc(OnClickTMioButton));
         @TMioAuthorButton = NvgButton(vec4(1, 1, 1, .8), vec4(0, 0, 0, 1), CoroutineFunc(OnClickTMioAuthorButton));
 
+        // these two are the same (2023-02-01)
         AuthorAccountId = info.AuthorAccountId;
-        AuthorDisplayName = info.AuthorDisplayName;
         AuthorWebServicesUserId = info.AuthorWebServicesUserId;
+        // Some campaign maps are authored by https://trackmania.io/#/player/nadeo and info.AuthorDisplayName isn't set for these maps.
+        if (info.AuthorDisplayName.Length > 0)
+            AuthorDisplayName = info.AuthorDisplayName;
 
         SetName(info.Name);
         FileName = info.FileName;
@@ -518,6 +520,9 @@ class MapInfo_UI : MapInfo_Data {
         super();
     }
 
+    // todo: we should be able to pull most of these values from the records UI widget.
+    // This would be good to do b/c some servers will change the size/location of the widget (e.g., i've seen a pyplanet server with this).
+
     vec2 baseRes = vec2(2560.0, 1440.0);
     float heightProp = 64.0 / baseRes.y;
     float fullWidthProp = 400.0 / baseRes.y;
@@ -585,13 +590,14 @@ class MapInfo_UI : MapInfo_Data {
 
         auto textSize = nvg::TextBounds(mainLabel);
         if (textSize.x > maxTextSize) {
-            fs *= maxTextSize / textSize.x;
-            nvg::FontSize(fs);
+            // don't change the fs var here b/c it makes the text in the side pullout smaller
+            nvg::FontSize(fs * maxTextSize / textSize.x);
             textSize = nvg::TextBounds(mainLabel);
+            // just set the max size to what we expect to get things pixel perfect.
+            textSize.x = maxTextSize;
         }
 
-        // subtract 1 from width to avoid drawing 1 too many pixles when reducing the size b/c text is too large.
-        float width = xPad * 2.0 + textSize.x - 1.;
+        float width = xPad * 2.0 + textSize.x;
         rect.x -= width;
         rect.z = width;
         float textHOffset = rect.w * .55 - textSize.y / 2.0;
@@ -844,33 +850,99 @@ class MapInfo_UI : MapInfo_Data {
 
 
     void Draw_DebugUI() {
-        if (!S_ShowMapInfo) return;
+        if (!S_ShowDebugUI) return;
 
-        if (UI::Begin("\\$8f0" + Icons::Map + "\\$z Map Info " + uid, UI::WindowFlags::AlwaysAutoResize)) {
+        UI::SetNextWindowSize(800, 500, UI::Cond::FirstUseEver);
+        if (UI::Begin("\\$8f0" + Icons::Map + "\\$z Map Info -- Debug", S_ShowDebugUI, UI::WindowFlags::None)) {
+            if (UI::BeginTable("mapInfoDebug", 3, UI::TableFlags::SizingFixedFit)) {
+                UI::TableSetupColumn("key", UI::TableColumnFlags::WidthFixed);
+                UI::TableSetupColumn("value", UI::TableColumnFlags::WidthStretch);
+                UI::TableSetupColumn("copy", UI::TableColumnFlags::WidthFixed);
 
-            // shitty debug view for now
-            UI::BeginTable("mapInfoDebug", 2);
+                DebugTableRowStr("uid", uid);
+                DebugTableRowStr("author", author);
+                DebugTableRowStr("Name", Name);
+                DebugTableRowStr("RawName", RawName);
+                DebugTableRowStr("CleanName", CleanName);
+                DebugTableRowStr("NvgName", NvgName.ToString());
 
-            DebugUITableRow("Name:", Name);
-            DebugUITableRow("Author:", AuthorDisplayName);
-            DebugUITableRow("Author WSID:", AuthorWebServicesUserId);
-            DebugUITableRow("Author AcctID:", AuthorAccountId);
-            DebugUITableRow("Published:", DateStr);
-            DebugUITableRow("TOTD:", TOTDStr);
-            DebugUITableRow("# Finishes:", NbPlayersStr);
-            DebugUITableRow("Worst Time:", WorstTimeStr);
+                DebugTableRowStr("AuthorAccountId", AuthorAccountId);
+                DebugTableRowStr("AuthorDisplayName", AuthorDisplayName);
+                DebugTableRowStr("AuthorWebServicesUserId", AuthorWebServicesUserId);
+                DebugTableRowStr("FileName", FileName);
+                DebugTableRowStr("FileUrl", FileUrl);
+                DebugTableRowStr("ThumbnailUrl", ThumbnailUrl);
+                DebugTableRowUint("TimeStamp", TimeStamp);
+                DebugTableRowUint("AuthorScore", AuthorScore);
+                DebugTableRowUint("GoldScore", GoldScore);
+                DebugTableRowUint("SilverScore", SilverScore);
+                DebugTableRowUint("BronzeScore", BronzeScore);
+                DebugTableRowStr("DateStr", DateStr);
 
-            UI::EndTable();
+                DebugTableRowInt("UploadedToNadeo", UploadedToNadeo);
+                DebugTableRowButton("TMioButton", TMioButton);
+                DebugTableRowButton("TMioAuthorButton", TMioAuthorButton);
+
+                DebugTableRowInt("UploadedToTMX", UploadedToTMX);
+                DebugTableRowInt("TMXAuthorID", TMXAuthorID);
+                DebugTableRowInt("TrackID", TrackID);
+                DebugTableRowStr("TrackIDStr", TrackIDStr);
+
+                DebugTableRowJsonValueHandle("TMX_Info", TMX_Info);
+                DebugTableRowButton("TMXButton", TMXButton);
+                DebugTableRowButton("TMXAuthorButton", TMXAuthorButton);
+
+                DebugTableRowUint("NbPlayers", NbPlayers);
+                DebugTableRowUint("WorstTime", WorstTime);
+                DebugTableRowStr("NbPlayersStr", NbPlayersStr);
+                DebugTableRowStr("WorstTimeStr", WorstTimeStr);
+
+                DebugTableRowStr("TOTDDate", TOTDDate);
+                DebugTableRowInt("TOTDDaysAgo", TOTDDaysAgo);
+                DebugTableRowStr("TOTDStr", TOTDStr);
+
+                DebugTableRowUint("LoadingStartedAt", LoadingStartedAt);
+                DebugTableRowBool("LoadedMapData", LoadedMapData);
+                DebugTableRowBool("LoadedNbPlayers", LoadedNbPlayers);
+                DebugTableRowBool("LoadedWasTOTD", LoadedWasTOTD);
+
+                DebugTableRowInt("UploadedToTmDojo", UploadedToTmDojo);
+                DebugTableRowJsonValueHandle("TmDojoData", TmDojoData);
+                DebugTableRowButton("TmDojoButton", TmDojoButton);
+
+                UI::EndTable();
+            }
         }
         UI::End();
     }
 
-    void DebugUITableRow(const string &in key, const string &in value) {
+    void DebugTableRowStr(const string &in key, const string &in value) {
+        UI::PushID(key);
+
         UI::TableNextRow();
         UI::TableNextColumn();
         UI::Text(key);
         UI::TableNextColumn();
         UI::Text(value);
+        UI::TableNextColumn();
+        if (UI::Button(Icons::Clone)) IO::SetClipboard(value);
+
+        UI::PopID();
+    }
+    void DebugTableRowInt(const string &in key, const int &in value) {
+        DebugTableRowStr(key, tostring(value));
+    }
+    void DebugTableRowUint(const string &in key, const uint &in value) {
+        DebugTableRowStr(key, tostring(value));
+    }
+    void DebugTableRowBool(const string &in key, bool value) {
+        DebugTableRowStr(key, tostring(value));
+    }
+    void DebugTableRowButton(const string &in key, NvgButton@ btn) {
+        DebugTableRowStr(key, btn is null ? "null" : Text::Format("%.3f", btn.anim.Progress));
+    }
+    void DebugTableRowJsonValueHandle(const string &in key, Json::Value@ value) {
+        DebugTableRowStr(key, value is null ? "null" : Json::Write(value));
     }
 }
 

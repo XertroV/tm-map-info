@@ -49,7 +49,7 @@ void Render() {
         if (tmDojoLogo is null)
             LoadTextures();
         g_MapInfo.Draw();
-        // g_MapInfo.Draw_DebugUI();
+        if (S_ShowDebugUI) g_MapInfo.Draw_DebugUI();
 
         auto loadProgress = GetApp().LoadProgress;
         if (loadProgress !is null && loadProgress.State != NGameLoadProgress_SMgr::EState::Disabled) {
@@ -61,8 +61,12 @@ void Render() {
 const string MenuLabel = "\\$8f0" + Icons::Map + "\\$z " + Meta::ExecutingPlugin().Name;
 
 void RenderMenu() {
-    if(UI::MenuItem(MenuLabel, "", S_ShowMapInfo)) {
+    if (UI::MenuItem(MenuLabel, "", S_ShowMapInfo)) {
         S_ShowMapInfo = !S_ShowMapInfo;
+    }
+
+    if (S_ShowDebugMenuItem && UI::MenuItem(MenuLabel + " (Debug Window)", "", S_ShowDebugUI)) {
+        S_ShowDebugUI = !S_ShowDebugUI;
     }
 }
 

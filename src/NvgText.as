@@ -52,6 +52,8 @@ class NvgText {
             }
             cols.InsertLast(hexTriToRgb(hex));
         }
+        // cache the string value
+        ToString();
     }
 
     uint8 oChar = "o"[0];
@@ -74,6 +76,19 @@ class NvgText {
             xOff += Math::Max(0.0, xy.x - fs / 7.0);
         }
         nvg::FillColor(vec4(defaultCol.x, defaultCol.y, defaultCol.z, alpha));
+    }
+
+    string _asStr;
+    const string ToString() {
+        if (_asStr.Length == 0) {
+            for (uint i = 0; i < parts.Length; i++) {
+                // auto item = parts[i];
+                _asStr += "$" + rgbToHexTri(cols[i].x < 0 ? vec3(1,1,1) : cols[i]);
+                _asStr += parts[i];
+            }
+            _asStr = _asStr.Replace(SPACE_CHAR, " ");
+        }
+        return _asStr;
     }
 }
 
