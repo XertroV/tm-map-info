@@ -26,8 +26,9 @@ namespace TOTD {
             yield();
             // uint year = months[i]["year"];
             // uint month = months[i]["month"];
+            auto @days = months[i]["days"];
             uint lastDay = months[i]["lastDay"];
-            for (uint j = lastDay - 1; j < lastDay; j--) {
+            for (uint j = Math::Min(lastDay - 1, days.Length - 1); j < lastDay; j--) {
                 auto @totd = months[i]["days"][j];
                 string uid = totd["mapUid"];
                 if (uid.Length == 0) continue;

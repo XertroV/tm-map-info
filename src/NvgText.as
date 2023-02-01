@@ -203,7 +203,7 @@ vec3 rgbToHSL(vec3 rgb) {
 uint8 ToSingleHexCol(float v) {
     if (v < 0) { v = 0; }
     if (v > 15.9999) { v = 15.9999; }
-    int u = uint8(Math::Round(v));
+    int u = uint8(Math::Floor(v));
     if (u < 10) { return 48 + u; }  /* 48 = '0' */
     return 87 + u;  /* u>=10 and 97 = 'a' */
 }
