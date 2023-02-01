@@ -640,58 +640,56 @@ class MapInfo_UI : MapInfo_Data {
     }
 
     void Draw_LoadingScreen() {
-        // nvg test code at the begining to help test when this function was being called. can be removed
-        // screen = vec2(Draw::GetWidth(), Draw::GetHeight());
-        // nvg::Reset();
-        // nvg::BeginPath();
-        // nvg::Rect(screen / 4., screen / 2.);
-        // nvg::FillColor(vec4(0, 0, 0, .5));
-        // nvg::Fill();
-        // nvg::ClosePath();
-
         if (!S_ShowLoadingScreenInfo) return;
 
-        // have to use imgui to draw atop better loading screen
-        UI::DrawList@ dl = UI::GetForegroundDrawList();
-
         string[] lines;
-
-        // lines.InsertLast("Now loading...");
-        // lines.InsertLast("");
         lines.InsertLast(g_MapInfo.Name);
         lines.InsertLast("by " + g_MapInfo.AuthorDisplayName);
         lines.InsertLast("");
         lines.InsertLast("Published: " + g_MapInfo.DateStr);
         if (TOTDStr.Length > 0)
             lines.InsertLast("TOTD: " + TOTDStr);
-        lines.InsertLast("Nb Players: " + NbPlayersStr);
+        lines.InsertLast("# Finishes: " + NbPlayersStr);
         lines.InsertLast("Worst Time: " + WorstTimeStr);
         lines.InsertLast("TMX: " + TrackIDStr);
 
-        // we only use imgui drawList if we have to (BLS installed), otherwise use nvg for performance
-        if (Meta::GetPluginFromID("BetterLoadingScreen") !is null) {
-            dl.AddRectFilled(vec4(0, 160, Draw::GetWidth(), 50*lines.Length+20), vec4(0,0,0,0.75));
-        } else {
-            // DrawBgRect()
-            nvg::FillColor(vec4(0,0,0,0.75));
-            nvg::BeginPath();
-            nvg::Rect(vec2(0,160), vec2(Draw::GetWidth(), 50*lines.Length+20));
-            nvg::Fill();
+        auto bls = Meta::GetPluginFromID("BetterLoadingScreen");
+        bool drawOverBLS = bls !is null && bls.Enabled;
 
+        vec2 screen = vec2(Draw::GetWidth(), Draw::GetHeight());
+        float fs = drawOverBLS ? 40.0 : (fontProp * screen.y);
+        float yTop = screen.y * S_LoadingScreenYOffsetPct / 100.0;
+        float gap = fs / 4.0;
+        // 0.069 = 100/1440
+        float lineHeight = fs + gap;
+        float height = gap + lines.Length * lineHeight;
+        vec4 bgRect = vec4(0, yTop, screen.x, height);
+        vec2 pos = vec2((Math::Max(0, screen.x / screen.y - 1.77777777) / 2. + 0.069) * screen.y, yTop + gap);
+
+        UI::DrawList@ dl = UI::GetForegroundDrawList();
+
+        // we only use imgui drawList if we have to (BLS installed), otherwise use nvg for performance
+        if (drawOverBLS) {
+            // have to use imgui to draw atop better loading screen
+            dl.AddRectFilled(bgRect, BgColor);
+        } else {
+            nvg::BeginPath();
+            DrawBgRect(bgRect.xy, vec2(bgRect.z, bgRect.w));
             // text stuff for later, might as well run it here so its not wasting resources when BLS is installed
             nvg::TextAlign(nvg::Align::Top | nvg::Align::Left);
             nvg::FillColor(vec4(1,1,1,1));
             nvg::FontFace(g_NvgFont);
-            nvg::FontSize(40);
+            nvg::FontSize(fs);
         }
 
-
         for (uint i = 0; i < lines.Length; i++) {
-            if (Meta::GetPluginFromID("BetterLoadingScreen") !is null) {
-                dl.AddText(vec2(100,180+(50*i)), vec4(1,1,1,1), lines[i], g_ImguiFont);
+            if (drawOverBLS) {
+                dl.AddText(pos, vec4(1,1,1,1), lines[i], g_ImguiFont);
             } else {
-                nvg::Text(vec2(100,180+(50*i)), lines[i]);
+                if (i == 0) NvgName.Draw(pos, vec3(1, 1, 1), fs, 1.0);
+                else nvg::Text(pos, lines[i]);
             }
+            pos.y += lineHeight;
         }
     }
 
@@ -827,9 +825,10 @@ class MapInfo_UI : MapInfo_Data {
         nvg::ClosePath();
     }
 
+    vec4 BgColor = vec4(0, 0, 0, .85);
     void DrawBgRect(vec2 pos, vec2 size) {
         nvg::Rect(pos, size);
-        nvg::FillColor(vec4(0, 0, 0, .85));
+        nvg::FillColor(BgColor);
         nvg::Fill();
     }
 

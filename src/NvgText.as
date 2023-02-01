@@ -1,5 +1,6 @@
 // an obscure characture, used by nvg text to avoid mis-rendering spaces. should be about the size of a space.
 const string SPACE_CHAR = "|";
+const float TAU = 6.28318530717958647692;
 
 /**
  * Parse a color string and provide a draw function so that we can draw colored text.
@@ -16,6 +17,7 @@ class NvgText {
     NvgText(const string &in coloredText) {
         print(coloredText);
         auto preText = MakeColorsOkayDarkMode(ColoredString((coloredText))).Replace(" ", SPACE_CHAR);
+        // auto preText = ColoredString((coloredText)).Replace(" ", SPACE_CHAR);
         @parts = preText.Split("\\$");
         uint startAt = 0;
         if (!preText.StartsWith("\\$")) {
@@ -65,11 +67,21 @@ class NvgText {
         return char == oChar || char == iChar || char == sChar || char == "<"[0] || char == ">"[0];
     }
 
-    void Draw(vec2 pos, vec3 defaultCol, float fs, float alpha = 1.0) {
+    float strokeIters = 9;
+    void Draw(vec2 pos, vec3 defaultCol, float fs, float alpha, float strokeSize) {
+        // if (strokeSize < 0) strokeSize = fs * 0.1;
+        // for (float i = 0; i < 1; i += 1. / strokeIters) {
+        //     float theta = TAU * i;
+        //     Draw(pos + vec2(Math::Sin(theta), Math::Cos(theta)) * strokeSize, vec3(0, 0, 0), fs, alpha, true);
+        // }
+        Draw(pos, defaultCol, fs, alpha);
+    }
+
+    void Draw(vec2 pos, vec3 defaultCol, float fs, float alpha = 1.0, bool suppressColor = false) {
         float xOff = 0;
         for (uint i = 0; i < parts.Length; i++) {
             auto col = cols[i];
-            if (col.x < 0) col = defaultCol;
+            if (suppressColor || col.x < 0) col = defaultCol;
             nvg::FillColor(vec4(col.x, col.y, col.z, alpha));
             auto xy = nvg::TextBounds(parts[i]);
             nvg::Text(pos + vec2(xOff, 0), parts[i].Replace(SPACE_CHAR, " "));
