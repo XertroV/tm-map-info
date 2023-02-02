@@ -7,10 +7,10 @@ namespace TmDojo {
         req.Start();
         while (!req.Finished()) yield();
         if (req.ResponseCode() >= 400 || req.ResponseCode() < 200 || req.Error().Length > 0) {
-            warn("[status:" + req.ResponseCode() + "] Error getting map by UID from TM Dojo: " + req.Error());
+            log_warn("[status:" + req.ResponseCode() + "] Error getting map by UID from TM Dojo: " + req.Error());
             return null;
         }
-        // print("Debug tmdojo get map by uid: " + req.String());
+        // log_info("Debug tmdojo get map by uid: " + req.String());
         return Json::Parse(req.String());
     }
 }

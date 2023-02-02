@@ -6,12 +6,17 @@ void Main() {
     if (Meta::GetPluginFromID("BetterLoadingScreen") !is null && S_ShowLoadingScreenInfo) {
         // we only need to use imgui fonts if BLS is installed, as it renders atop the nvg layer. if
         // BLS isn't installed, we can use more-performant nvg rendering
-        @g_ImguiFont = UI::LoadFont("fonts/Montserrat-SemiBoldItalic.ttf", 40.f);
+        LoadImGUIFont();
     }
     startnew(ClearTaskCoro);
     startnew(TOTD::LoadTOTDs);
     startnew(MonitorUIVisible);
     startnew(CacheTodaysDate);
+}
+
+void LoadImGUIFont() {
+    if (g_ImguiFont !is null) return;
+    @g_ImguiFont = UI::LoadFont("fonts/Montserrat-SemiBoldItalic.ttf", 40.f);
 }
 
 string TodaysDate = "xxxx-xx-xx";
@@ -32,11 +37,11 @@ void MonitorUIVisible() {
 
 // load textures from within render loop when we need them.
 void LoadTextures() {
-    trace("Loading textures...");
+    log_trace("Loading textures...");
     @tmDojoLogo = nvg::LoadTexture("img/tmdojo_logo.png");
     @tmIOLogo = nvg::LoadTexture("img/tmio_logo.png");
     @tmxLogo = nvg::LoadTexture("img/tmx_logo.png");
-    trace("Loaded textures.");
+    log_trace("Loaded textures.");
 }
 
 /** Called every frame. `dt` is the delta time (milliseconds since last frame).

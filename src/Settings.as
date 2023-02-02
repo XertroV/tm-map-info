@@ -14,3 +14,8 @@ bool S_ShowDebugUI = false;
 
 [Setting category="General" name="Add Debug Window toggle to Plugins Menu"]
 bool S_ShowDebugMenuItem = false;
+
+
+
+[Setting category="General" name="Log Level"]
+LogLevel S_LogLevel = LogLevel::Info;

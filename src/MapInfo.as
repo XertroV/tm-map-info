@@ -39,7 +39,7 @@ void OnNewMap() {
     } else {
         if (g_MapInfo !is null) g_MapInfo.Shutdown();
         @g_MapInfo = MapInfo_UI();
-        trace("Instantiated map info");
+        log_trace("Instantiated map info");
     }
     // CGameCtnChallenge@ map = GetApp().RootMap;
     // if (map is null) return;
@@ -195,19 +195,31 @@ class MapInfo_Data {
         BronzeScore = info.BronzeScore;
 
         LoadedMapData = true;
-        trace('MapInfo_Data loaded map data');
+        log_trace('MapInfo_Data loaded map data');
         startnew(CoroutineFunc(this.LoadThumbnail));
     }
 
-    nvg::Texture@ ThumbnailTexture = null;
+    MapThumbnailTexture@ Textures = null;
+
+    nvg::Texture@ ThumbnailTexture {
+        get { return Textures is null ? null : Textures.nvgTex; }
+    }
+    UI::Texture@ UI_ThumbnailTexture {
+        get { return Textures is null ? null : Textures.uiTex; }
+    }
+
     void LoadThumbnail() {
-        auto req = Net::HttpGet(ThumbnailUrl);
-        while (!req.Finished()) yield();
-        if (req.ResponseCode() != 200) {
-            warn('GET Thumbnail response: ' + req.ResponseCode());
-            return;
-        }
-        @ThumbnailTexture = nvg::LoadTexture(req.Buffer());
+        @Textures = TextureCache::Get(ThumbnailUrl);
+        // auto req = Net::HttpGet(ThumbnailUrl);
+        // while (!req.Finished()) yield();
+        // if (req.ResponseCode() != 200) {
+        //     warn('GET Thumbnail response: ' + req.ResponseCode());
+        //     return;
+        // }
+        // auto buf = req.Buffer();
+        // @ThumbnailTexture = nvg::LoadTexture(buf);
+        // buf.Seek(0);
+        // @UI_ThumbnailTexture = UI::LoadTexture(buf);
     }
 
     const string GetNbPlayersRange() {
@@ -231,11 +243,11 @@ class MapInfo_Data {
         WorstTimeStr = Time::Format(WorstTime);
 
         LoadedNbPlayers = true;
-        trace('MapInfo_Data loaded nb players: ' + NbPlayersStr);
+        log_trace('MapInfo_Data loaded nb players: ' + NbPlayersStr);
 
         // add a random time to let the server have some time to cache the next value
         float refreshInSeconds = resp.Get('refresh_in', 150.0) + Math::Rand(0.0, 15.0);
-        trace('Refreshing nb players in: (s) ' + refreshInSeconds);
+        log_trace('Refreshing nb players in: (s) ' + refreshInSeconds);
         sleep(int(refreshInSeconds * 1000.0));
         if (SHUTDOWN) return;
         if (GetApp().RootMap is null || currentMapUid != uid) return;
@@ -325,7 +337,7 @@ class MapInfo_Data {
         auto nbUiLayers = cmap.UILayers.Length;
         // if the number of UI layers decreases it's probably due to a recovery restart, so we don't want to act on old references
         if (nbUiLayers <= 2 || nbUiLayers < lastNbUilayers) {
-            trace('nbUiLayers: ' + nbUiLayers + '; lastNbUilayers' + lastNbUilayers);
+            log_debug('nbUiLayers: ' + nbUiLayers + '; lastNbUilayers' + lastNbUilayers);
             return false;
         }
         lastNbUilayers = nbUiLayers;
@@ -403,34 +415,34 @@ class MapInfo_Data {
     private bool isRecordsElementVisible = false;
     private void MonitorRecordsVisibility() {
         // these traces are to help investigate crashes -- can be commented later for production (or we could make a loglevel thing so ppl can turn them back on if they get crashes)
-        trace('test populated');
+        log_debug('test populated');
         while (!IsUIPopulated()) yield();
-        trace('test safe');
+        log_debug('test safe');
         if (!IsSafeToCheckUI()) {
-            warn("unexpectedly failed UI safety check. probably in the editor or something.");
+            log_warn("unexpectedly failed UI safety check. probably in the editor or something.");
             return;
         }
-        trace('is safe');
+        log_debug('is safe');
         // once we detect things have started to load, wait another second
-        trace('sleep');
+        log_debug('sleep');
         for (uint i = 0; i < 10; i++) yield();
-        trace('assert safe');
+        log_debug('assert safe');
         yield();
         while (!IsSafeToCheckUI()) yield(); // throw("Should only happen if we exit the map super fast.");
-        trace('find UI elements');
+        log_debug('find UI elements');
         while (IsSafeToCheckUI() && !FindUIElements()) {
             sleep(100);
         }
-        trace('done checking ui. found: ' + lastRecordsLayerIndex);
+        log_debug('done checking ui. found: ' + lastRecordsLayerIndex);
         yield();
-        trace('initial records element vis check');
+        log_debug('initial records element vis check');
         yield();
         isRecordsElementVisible = IsSafeToCheckUI();
-        trace('records element vis check, can proceed: ' + tostring(isRecordsElementVisible));
+        log_debug('records element vis check, can proceed: ' + tostring(isRecordsElementVisible));
         yield();
         isRecordsElementVisible = isRecordsElementVisible && IsRecordElementVisible();
         yield();
-        trace('records visible: ' + tostring(isRecordsElementVisible));
+        log_debug('records visible: ' + tostring(isRecordsElementVisible));
         yield();
 
         while (!SHUTDOWN) {
@@ -438,7 +450,7 @@ class MapInfo_Data {
             if (GetApp().RootMap is null || GetApp().RootMap.EdChallengeId != uid) break;
             isRecordsElementVisible = IsSafeToCheckUI() && IsRecordElementVisible();
         }
-        trace('exited');
+        log_debug('exited');
     }
 
     float slideFrameProgress = 1.0;
@@ -474,14 +486,14 @@ class MapInfo_Data {
         auto cmap = app.Network.ClientManiaAppPlayground;
         if (cmap is null) throw('should never be null');
         auto nbLayers = cmap.UILayers.Length;
-        trace('nb layers: ' + nbLayers);
+        log_debug('nb layers: ' + nbLayers);
         bool foundRecordsLayer = lastRecordsLayerIndex < nbLayers
             && IsUILayerRecordLayer(cmap.UILayers[lastRecordsLayerIndex]);
-        trace('did not find records layer with init check');
+        log_debug('did not find records layer with init check');
         if (!foundRecordsLayer) {
             // don't check very early layers -- might sometimes crash the game?
             for (uint i = 3; i < nbLayers; i++) {
-                trace('checking layer: ' + i);
+                log_debug('checking layer: ' + i);
                 if (IsUILayerRecordLayer(cmap.UILayers[i])) {
                     lastRecordsLayerIndex = i;
                     foundRecordsLayer = true;
@@ -493,12 +505,12 @@ class MapInfo_Data {
     }
 
     bool IsUILayerRecordLayer(CGameUILayer@ layer) {
-        trace('checking layer');
+        log_debug('checking layer');
         if (layer is null) return false;
-        trace('checking layer ML length');
+        log_debug('checking layer ML length');
         // when ManialinkPage length is zero, accessing stuff might crash the game (specifically, ManialinkPageUtf8)
         if (layer.ManialinkPage.Length == 0) return false;
-        trace('checking layer ML');
+        log_debug('checking layer ML');
         // accessing ManialinkPageUtf8 in some cases might crash the game
         if (layer.ManialinkPage.Length < 10) return false;
         return string(layer.ManialinkPage.SubStr(0, 127)).Trim().StartsWith('<manialink name="UIModule_Race_Record"');
@@ -666,10 +678,21 @@ class MapInfo_UI : MapInfo_Data {
         vec4 bgRect = vec4(0, yTop, screen.x, height);
         vec2 pos = vec2((Math::Max(0, screen.x / screen.y - 1.77777777) / 2. + 0.069) * screen.y, yTop + gap);
 
+        // thumbnail cacls
+        float thumbH = height - gap * 2.0;
+        bool willDrawThumbnail = (!drawOverBLS && ThumbnailTexture !is null) || (drawOverBLS && UI_ThumbnailTexture !is null);
+        vec2 imgSize = vec2(thumbH, thumbH);
+        vec2 imgPos = vec2(screen.x - imgSize.x - (Math::Max(0, screen.x / screen.y - 1.77777777) / 2. + 0.069) * screen.y, yTop + gap);
+
+        // need this for BLS branches
         UI::DrawList@ dl = UI::GetForegroundDrawList();
 
         // we only use imgui drawList if we have to (BLS installed), otherwise use nvg for performance
         if (drawOverBLS) {
+            if (g_ImguiFont is null) { // can happen if BLS installed after MapInfo running
+                startnew(LoadImGUIFont);
+                return;
+            }
             // have to use imgui to draw atop better loading screen
             dl.AddRectFilled(bgRect, BgColor);
         } else {
@@ -686,10 +709,18 @@ class MapInfo_UI : MapInfo_Data {
             if (drawOverBLS) {
                 dl.AddText(pos, vec4(1,1,1,1), lines[i], g_ImguiFont);
             } else {
-                if (i == 0) NvgName.Draw(pos, vec3(1, 1, 1), fs, 1.0);
+                if (i == 0 && NvgName !is null) NvgName.Draw(pos, vec3(1, 1, 1), fs, 1.0);
                 else nvg::Text(pos, lines[i]);
             }
             pos.y += lineHeight;
+        }
+
+        if (willDrawThumbnail) {
+            if (drawOverBLS) {
+                dl.AddImage(UI_ThumbnailTexture, imgPos, imgSize);
+            } else {
+                DrawTexture(imgPos, imgSize, ThumbnailTexture);
+            }
         }
     }
 

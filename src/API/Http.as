@@ -2,7 +2,7 @@ Json::Value@ FetchLiveEndpoint(const string &in route) {
     NadeoServices::AddAudience("NadeoLiveServices");
     while (!NadeoServices::IsAuthenticated("NadeoLiveServices")) yield();
 
-    trace("[FetchLiveEndpoint] Requesting: " + route);
+    log_trace("[FetchLiveEndpoint] Requesting: " + route);
     auto req = NadeoServices::Get("NadeoLiveServices", route);
     req.Start();
     while(!req.Finished()) { yield(); }
@@ -13,7 +13,7 @@ Json::Value@ FetchClubEndpoint(const string &in route) {
     NadeoServices::AddAudience("NadeoClubServices");
     while (!NadeoServices::IsAuthenticated("NadeoClubServices")) yield();
 
-    trace("[FetchClubEndpoint] Requesting: " + route);
+    log_trace("[FetchClubEndpoint] Requesting: " + route);
     auto req = NadeoServices::Get("NadeoClubServices", route);
     req.Start();
     while(!req.Finished()) { yield(); }
@@ -39,7 +39,7 @@ Json::Value@ CallMapMonitorApiPath(const string &in path) {
     AssertGoodPath(path);
     // auto token = MM_Auth::GetCachedToken();
     auto url = MM_API_ROOT + path;
-    trace("[CallMapMonitorApiPath] Requesting: " + url);
+    log_trace("[CallMapMonitorApiPath] Requesting: " + url);
     auto req = Net::HttpRequest();
     req.Url = MM_API_ROOT + path;
     req.Headers['User-Agent'] = 'MapInfo/Openplanet-Plugin/contact=@XertroV';

@@ -12,7 +12,7 @@ namespace TOTD {
 
         auto resp = Live::GetTotdByMonth();
         if (resp.GetType() != Json::Type::Object) {
-            warn("LoadTOTDs got bad response: " + Json::Write(resp));
+            log_warn("LoadTOTDs got bad response: " + Json::Write(resp));
             sleep(10000);
             startnew(LoadTOTDs);
             return;

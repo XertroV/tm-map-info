@@ -15,7 +15,7 @@ class NvgText {
     vec3[] cols;
 
     NvgText(const string &in coloredText) {
-        print(coloredText);
+        log_debug('NvgText orig: ' + coloredText);
         auto preText = MakeColorsOkayDarkMode(ColoredString((coloredText))).Replace(" ", SPACE_CHAR);
         // auto preText = ColoredString((coloredText)).Replace(" ", SPACE_CHAR);
         @parts = preText.Split("\\$");
@@ -25,7 +25,6 @@ class NvgText {
             cols.InsertLast(vec3(-1, -1, -1));
         }
         for (uint i = startAt; i < parts.Length; i++) {
-            print(parts[i]);
             if (parts[i].Length == 0) {
                 cols.InsertLast(i == 0 ? vec3(-1, -1, -1) : cols[cols.Length - 1]);
                 continue;
@@ -128,7 +127,7 @@ uint8 HexCharToInt(int char) {
         if (v < 16) return v;
         return v - (97 - 65);    // a = 97 ascii
     }
-    warn("HexCharToInt got char with code " + char + " but that isn't 0-9 or a-f or A-F in ascii.");
+    log_warn("HexCharToInt got char with code " + char + " but that isn't 0-9 or a-f or A-F in ascii.");
     return 15;
 }
 
