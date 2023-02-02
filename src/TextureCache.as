@@ -11,6 +11,8 @@ namespace TextureCache {
     }
 }
 
+// Cache a texture
+// -- alternate design idea: don't cache the textures, but cache the buffer. Then null the textures on map change, and reload dynamically when used again. Avoids memory leak with texture files, but also avoids redownloading.
 class MapThumbnailTexture {
     nvg::Texture@ nvgTex = null;
     UI::Texture@ uiTex = null;
