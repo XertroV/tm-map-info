@@ -108,7 +108,7 @@ bool IsWithin(vec2 pos, vec2 topLeft, vec2 size) {
         ;
 }
 
-vec2 g_MouseCoords;
+vec2 g_MouseCoords = vec2();
 
 /** Called whenever the mouse moves. `x` and `y` are the viewport coordinates.
 */

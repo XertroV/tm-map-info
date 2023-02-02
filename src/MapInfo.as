@@ -9,12 +9,6 @@ void CheckForNewMap() {
     CTrackMania@ app = cast<CTrackMania>(GetApp());
     string mapUid;
 
-    // bool rmNull = app.RootMap is null;
-    // bool cmapPgMapNull = app.Network.ClientManiaAppPlayground is null
-    //     || app.Network.ClientManiaAppPlayground.Playground is null
-    //     || app.Network.ClientManiaAppPlayground.Playground.Map is null
-    //     ;
-
     // todo: check app.RootMap.MapInfo.IsPlayable corresponds to unvalidated maps
     if (app.RootMap is null || !app.RootMap.MapInfo.IsPlayable || app.Editor !is null) { // app.CurrentPlayground is null ||
         mapUid = "";
@@ -230,7 +224,10 @@ class MapInfo_Data {
         float nDigits = Math::Log10(NbPlayers - 1);
         int rangeDelta = 10 ** int(Math::Floor(nDigits));
         auto lower = NbPlayers - rangeDelta;
-        return tostring(lower / 1000) + "-" + tostring(NbPlayers / 1000) + "k";
+        bool isMil = lower >= 1000000;
+        string k = isMil ? "m" : "k";
+        int divBy = isMil ? 1000000 : 1000;
+        return tostring(lower / divBy) + "-" + tostring(NbPlayers / divBy) + k;
     }
 
     void GetMapInfoFromMapMonitorAPI() {
@@ -239,7 +236,6 @@ class MapInfo_Data {
         WorstTime = resp.Get('last_highest_score', 0);
 
         NbPlayersStr = NbPlayers > 10000 && NbPlayers % 1000 == 0 ? GetNbPlayersRange() : tostring(NbPlayers);
-        // NbPlayersStrShort = NbPlayers > 10000 ? tostring(NbPlayers / 1000) + "k" : NbPlayersStr;
         WorstTimeStr = Time::Format(WorstTime);
 
         LoadedNbPlayers = true;
