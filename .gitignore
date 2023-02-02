@@ -1,2 +1,4 @@
 *.zip
-*.op
+# including the current release .op is convenient
+# *.op
+build/*
