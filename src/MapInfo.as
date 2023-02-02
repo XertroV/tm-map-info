@@ -132,7 +132,7 @@ class MapInfo_Data {
 
     void StartInitializationCoros() {
         startnew(CoroutineFunc(this.GetMapInfoFromCoreAPI));
-        startnew(CoroutineFunc(this.GetMapInfoFromMapMonitorAPI));
+        startnew(CoroutineFunc(this.RefreshMapInfoFromMapMonitorAPI));
         startnew(CoroutineFunc(this.GetMapTOTDStatus));
         startnew(CoroutineFunc(this.GetMapTMXStatus));
         startnew(CoroutineFunc(this.GetMapTMDojoStatus));
@@ -230,24 +230,56 @@ class MapInfo_Data {
         return tostring(lower / divBy) + "-" + tostring(NbPlayers / divBy) + k;
     }
 
-    void GetMapInfoFromMapMonitorAPI() {
+    Json::Value@ UpdateMapInfoFromMapMonitorAPI(bool isRefresh = false) {
         auto resp = MapMonitor::GetNbPlayersForMap(uid);
         NbPlayers = resp.Get('nb_players', 98765);
         WorstTime = resp.Get('last_highest_score', 0);
 
-        NbPlayersStr = NbPlayers > 10000 && NbPlayers % 1000 == 0 ? GetNbPlayersRange() : tostring(NbPlayers);
+        UpdateNbPlayersString();
         WorstTimeStr = Time::Format(WorstTime);
 
         LoadedNbPlayers = true;
         log_trace('MapInfo_Data loaded nb players: ' + NbPlayersStr);
+        return resp;
+    }
+
+    void UpdateNbPlayersString() {
+        NbPlayersStr = NbPlayers > 10000 && NbPlayers % 1000 == 0 ? GetNbPlayersRange() : tostring(NbPlayers);
+        log_debug('Set NbPlayersStr to: ' + NbPlayersStr);
+    }
+
+    void RefreshMapInfoFromMapMonitorAPI() {
+        auto prevNbPlayers = NbPlayers;
+        log_debug('refresh map info pre: ' + prevNbPlayers);
+        auto resp = UpdateMapInfoFromMapMonitorAPI(true);
+        auto newNbPlayers = NbPlayers;
+        log_debug('refresh map info new: ' + newNbPlayers);
+        while (!SHUTDOWN && isLoading) yield();
+        if (SHUTDOWN) return;
+        if (prevNbPlayers < LoadingNbPlayersFlag && newNbPlayers != prevNbPlayers) {
+            NbPlayers = prevNbPlayers;
+            UpdateNbPlayersString();
+            // sexy count up logic
+            auto countAnim = AnimMgr(false, 1750);
+            yield();
+            while (!countAnim.IsDone) {
+                countAnim.Update(true);
+                NbPlayers = uint(Math::Round(Math::Lerp(float(prevNbPlayers), float(newNbPlayers), countAnim.Progress)));
+                UpdateNbPlayersString();
+                yield();
+            }
+            log_debug('new != prev, and done');
+        } else log_debug('new == prev, and done');
 
         // add a random time to let the server have some time to cache the next value
         float refreshInSeconds = resp.Get('refresh_in', 150.0) + Math::Rand(0.0, 15.0);
         log_trace('Refreshing nb players in: (s) ' + refreshInSeconds);
         sleep(int(refreshInSeconds * 1000.0));
+
         if (SHUTDOWN) return;
         if (GetApp().RootMap is null || currentMapUid != uid) return;
-        startnew(CoroutineFunc(this.GetMapInfoFromMapMonitorAPI));
+
+        startnew(CoroutineFunc(this.RefreshMapInfoFromMapMonitorAPI));
         if (UploadedToNadeo == 0) { // check again in case of upload
             startnew(CoroutineFunc(this.GetMapInfoFromCoreAPI));
         }

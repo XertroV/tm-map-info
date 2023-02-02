@@ -32,7 +32,7 @@ class AnimMgr {
             lastGrowingChange = Time::Now;
         }
 
-        // QuadOut
+        // QuadOut easing
         animOut = -(t * (t - 2.));
         animOut = Math::Min(clampMax, animOut);
         return animOut > 0.;
@@ -41,6 +41,12 @@ class AnimMgr {
     float Progress {
         get {
             return animOut;
+        }
+    }
+
+    bool IsDone {
+        get {
+            return animOut >= 1.0;
         }
     }
 }

@@ -50,6 +50,7 @@ void Update(float dt) {
     CheckForNewMap();
 }
 
+bool isLoading = false;
 void Render() {
     if (g_MapInfo !is null) {
         // call once on first entering a map.
@@ -59,7 +60,8 @@ void Render() {
         if (S_ShowDebugUI) g_MapInfo.Draw_DebugUI();
 
         auto loadProgress = GetApp().LoadProgress;
-        if (loadProgress !is null && loadProgress.State != NGameLoadProgress_SMgr::EState::Disabled) {
+        isLoading = loadProgress !is null && loadProgress.State != NGameLoadProgress_SMgr::EState::Disabled;
+        if (isLoading) {
             g_MapInfo.Draw_LoadingScreen();
         }
     }
