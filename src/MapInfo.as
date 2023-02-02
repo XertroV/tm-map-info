@@ -610,9 +610,11 @@ class MapInfo_UI : MapInfo_Data {
         rect.z = width;
         float textHOffset = rect.w * .55 - textSize.y / 2.0;
 
+        // debug rectangles drawn around records arrow and refresh lederboards (if it were pixel perfect)
         // DrawDebugRect(rect.xy + vec2(width - recordsWidth, 0), vec2(rect.w, rect.w));
         // DrawDebugRect(rect.xy + vec2(width - recordsWidth + rect.w + gap, 0), vec2(rect.w, rect.w));
-        // DrawDebugRect(rect.xy + vec2(width - recordsWidth + (rect.w + gap) * 2.0, 0), vec2(rect.w, rect.w));
+
+        // code to calc perfect position for refresh leaderboards button -- might be useful in future
         // float IdealWidth = Math::Min(ScreenWidth, ScreenHeight * 16.0 / 9.0);
         // float AspectDiff = Math::Max(0.0, ScreenWidth / ScreenHeight - 16.0 / 9.0) / 2.0;
         // ButtonPosX = (0.028 * IdealWidth + ScreenHeight * AspectDiff) / ScreenWidth;
@@ -799,31 +801,11 @@ class MapInfo_UI : MapInfo_Data {
             DrawTexture(tmxLinePos, btnLogoSize, tmDojoLogo, 1.0);
         }
 
-        // if (tmIOLogo !is null && @TMioAuthorButton !is null && authorBtnPos.x + btnSpaceNeeded < farRightBound) {
-        //     TMioAuthorButton.DrawButton(authorBtnPos, btnLogoSize, vec4(), halfPad, mainAnim.Progress);
-        //     DrawTexture(authorBtnPos, btnLogoSize, tmIOLogo);
-        //     authorBtnPos.x += xPad + fs;
-        // }
-
         if (tmxLogo !is null && @TMXAuthorButton !is null && authorBtnPos.x + btnSpaceNeeded < farRightBound) {
             TMXAuthorButton.DrawButton(authorBtnPos, btnLogoSize, vec4(), halfPad, mainAnim.Progress);
             DrawTexture(authorBtnPos, btnLogoSize, tmxLogo);
             authorBtnPos.x += xPad + fs;
         }
-
-        /** ! to add a button, you need to
-         * increment pos by the relevant height (it's the next position drawn at).
-         * If you don't use the same height as prior rows, add this height to the calculation of thumbnailFrameHeight. (you might need to add yStep otherwise).
-         * use IsWithin to test button bounds for hover etc. probs good to make a button class that is a property of this class.
-         * note: I've written an nvg button implementation here: https://github.com/XertroV/tm-editor-ui-toolbox/blob/master/src/NvgButton.as
-         *       (also some related files). mb is useful.
-         *       if you use that, i'd instantiate them in GetMapTMXStatus, and leave some handles as null otherwise.
-         *       or do some overload trickery to put all that logic in the UI class, which is neater.
-         * WRT buttons, my thoughts so far were to reduce the font size a bit and draw the button within the existing row heights.
-         * (both for programming easy-ness and to keep the UI consistent)
-         */
-
-        // button impl here?
 
         /* Thumbnail*/
 
@@ -991,65 +973,3 @@ class MapInfo_UI : MapInfo_Data {
         DebugTableRowStr(key, value is null ? "null" : Json::Write(value));
     }
 }
-
-
-
-// class MurderChairsUI {
-//     MurderChairsState@ state;
-
-//     void RenderUpdate(float dt) {
-//         // for game events
-//         vec2 pos = GameEventsTopLeft;
-//         // draw maps along top
-//         // draw game events
-//         float yDelta = BaseFontHeight + EventLogSpacing;
-//         for (int i = 0; i < int(state.activeEvents.Length); i++) {
-//             if (state.activeEvents[i].RenderUpdate(dt, pos)) {
-//                 state.activeEvents.RemoveAt(i);
-//                 i--;
-//             } else {
-//                 pos.y += yDelta;
-//             }
-//         }
-//     }
-// }
-
-// vec2 GameEventsTopLeft {
-//     get {
-//         float h = Draw::GetHeight();
-//         float w = Draw::GetWidth();
-//         float hOffset = 0;
-//         float idealWidth = 1.7777777777777777 * h;
-//         if (w < idealWidth) {
-//             float newH = w / 1.7777777777777777;
-//             hOffset = (h - newH) / 2.;
-//             h = newH;
-//         }
-//         if (UI::IsOverlayShown()) hOffset += 24;
-//         float wOffset = (float(Draw::GetWidth()) - (1.7777777777777777 * h)) / 2.;
-//         vec2 tl = vec2(wOffset, hOffset) + vec2(h * 0.15, w * 0.025);
-//         return tl;
-//     }
-// }
-
-
-// class MCGameEvent {
-//     vec4 col = vec4(1, 1, 1, 1);
-//     string msg = "undefined";
-//     float animDuration = 5.0;
-//     float currTime = 0.0;
-//     float t = 0.0;
-//     float baseFontSize = BaseFontHeight;
-
-//     bool RenderUpdate(float dt, vec2 pos) {
-//         currTime += dt;
-//         t = currTime / animDuration;
-//         if (t > 1.) return true;
-//         float alpha = Math::Clamp(5. - t * 5., 0., 1.);
-//         float fs = baseFontSize * Math::Clamp((t + .2), 1, 1.2);
-//         nvg::FontSize(fs);
-//         nvg::FillColor(col * vec4(1, 1, 1, 0) + vec4(0, 0, 0, alpha));
-//         nvg::Text(pos, msg);
-//         return false;
-//     }
-// }
