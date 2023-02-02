@@ -1,6 +1,6 @@
 // int g_NvgFont = nvg::LoadFont("fonts/Montserrat-BoldItalic.ttf", true, true);
 int g_NvgFont = nvg::LoadFont("fonts/Montserrat-SemiBoldItalic.ttf", true, true);
-UI::Font@ g_ImguiFont = UI::LoadFont("DroidSans.ttf", 26.0);
+UI::Font@ g_ImguiFont = null;
 
 void Main() {
     if (Meta::GetPluginFromID("BetterLoadingScreen") !is null && S_ShowLoadingScreenInfo) {

@@ -29,7 +29,7 @@ class MapThumbnailTexture {
 
     void GetLoadTextures() {
         encounteredError = false;
-        log_info('Downloading thumbnail: ' + url);
+        log_trace('Downloading thumbnail: ' + url);
         auto req = Net::HttpGet(url);
         while (!req.Finished()) yield();
         if (req.ResponseCode() != 200) {
