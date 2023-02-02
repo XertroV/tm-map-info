@@ -331,8 +331,12 @@ class MapInfo_Data {
         OpenBrowserURL("https://trackmania.exchange/user/profile/" + TMXAuthorID);
     }
 
+    const string GetTMioURL() {
+        return "https://trackmania.io/#/leaderboard/" + uid;
+    }
+
     void OnClickTMioButton() {
-        OpenBrowserURL("https://trackmania.io/#/leaderboard/" + uid);
+        OpenBrowserURL(GetTMioURL());
     }
 
     void OnClickTMioAuthorButton() {
@@ -942,12 +946,14 @@ class MapInfo_UI : MapInfo_Data {
                 DebugTableRowInt("UploadedToNadeo", UploadedToNadeo);
                 DebugTableRowButton("TMioButton", TMioButton);
                 DebugTableRowButton("TMioAuthorButton", TMioAuthorButton);
+                DebugTableRowStr("tm.io URL", GetTMioURL());
 
                 DebugTableRowInt("UploadedToTMX", UploadedToTMX);
                 DebugTableRowInt("TMXAuthorID", TMXAuthorID);
                 DebugTableRowInt("TrackID", TrackID);
                 DebugTableRowStr("TrackIDStr", TrackIDStr);
 
+                DebugTableRowStr("TMX API URL", TMX::getMapByUidEndpoint.Replace('{id}', uid));
                 DebugTableRowJsonValueHandle("TMX_Info", TMX_Info);
                 DebugTableRowButton("TMXButton", TMXButton);
                 DebugTableRowButton("TMXAuthorButton", TMXAuthorButton);
@@ -969,6 +975,7 @@ class MapInfo_UI : MapInfo_Data {
                 DebugTableRowInt("UploadedToTmDojo", UploadedToTmDojo);
                 DebugTableRowJsonValueHandle("TmDojoData", TmDojoData);
                 DebugTableRowButton("TmDojoButton", TmDojoButton);
+                DebugTableRowStr("TM Dojo API URL", TmDojo::mapInfoEndpoint.Replace('{uid}', uid));
 
                 UI::EndTable();
             }
