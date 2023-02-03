@@ -581,7 +581,7 @@ class MapInfo_UI : MapInfo_Data {
     float topRightXOffs = - (1720.0 - 840.0) / baseRes.x;
     vec2 trOffs = vec2(topRightXOffs, topRightYOffs);
     vec2 screen = baseRes;
-    vec4 bounds = vec4(-10);
+    vec4 bounds = vec4(-10, -1, -1, -1);
     float xPad = 20.;
 
     vec4 UpdateBounds() {
@@ -647,8 +647,8 @@ class MapInfo_UI : MapInfo_Data {
         float textHOffset = rect.w * .55 - textSize.y / 2.0;
 
         // debug rectangles drawn around records arrow and refresh lederboards (if it were pixel perfect)
-        // DrawDebugRect(rect.xy + vec2(width - recordsWidth, 0), vec2(rect.w, rect.w));
-        // DrawDebugRect(rect.xy + vec2(width - recordsWidth + rect.w + gap, 0), vec2(rect.w, rect.w));
+        // DrawDebugRect(rect.xyz.xy + vec2(width - recordsWidth, 0), vec2(rect.w, rect.w));
+        // DrawDebugRect(rect.xyz.xy + vec2(width - recordsWidth + rect.w + gap, 0), vec2(rect.w, rect.w));
 
         // code to calc perfect position for refresh leaderboards button -- might be useful in future
         // float IdealWidth = Math::Min(ScreenWidth, ScreenHeight * 16.0 / 9.0);
@@ -664,10 +664,10 @@ class MapInfo_UI : MapInfo_Data {
         // that's all we need.
 
         nvg::BeginPath();
-        DrawBgRect(rect.xy, rect.zw);
+        DrawBgRect(rect.xyz.xy, vec2(rect.z, rect.w));
 
         nvg::FillColor(vec4(1.0, 1, 1, 1));
-        nvg::Text(rect.xy + rect.zw * vec2(.5, .55), mainLabel);
+        nvg::Text(rect.xyz.xy + vec2(rect.z, rect.w) * vec2(.5, .55), mainLabel);
 
         nvg::ClosePath();
 
@@ -675,8 +675,8 @@ class MapInfo_UI : MapInfo_Data {
         nvg::ResetScissor();
         nvg::ResetTransform();
 
-        bool rawHover = IsWithin(g_MouseCoords, rect.xy, rect.zw + vec2(gap, 0))
-            || IsWithin(g_MouseCoords, rect.xy + vec2(rect.z + gap, 0), lastMapInfoSize);
+        bool rawHover = IsWithin(g_MouseCoords, rect.xyz.xy, vec2(rect.z, rect.w) + vec2(gap, 0))
+            || IsWithin(g_MouseCoords, rect.xyz.xy + vec2(rect.z + gap, 0), lastMapInfoSize);
             ;
         if (hoverAnim.Update(!closed && rawHover, slideFrameProgress)) {
             DrawHoveredInterface(rect, fs, textHOffset, gap);
@@ -731,7 +731,7 @@ class MapInfo_UI : MapInfo_Data {
             dl.AddRectFilled(bgRect, BgColor);
         } else {
             nvg::BeginPath();
-            DrawBgRect(bgRect.xy, vec2(bgRect.z, bgRect.w));
+            DrawBgRect(bgRect.xyz.xy, vec2(bgRect.z, bgRect.w));
             // text stuff for later, might as well run it here so its not wasting resources when BLS is installed
             nvg::TextAlign(nvg::Align::Top | nvg::Align::Left);
             nvg::FillColor(vec4(1,1,1,1));
@@ -780,7 +780,7 @@ class MapInfo_UI : MapInfo_Data {
 
         nvg::BeginPath();
 
-        vec2 tl = rect.xy + vec2(rect.z + gap, 0);
+        vec2 tl = rect.xyz.xy + vec2(rect.z + gap, 0);
         float rowsHeight = yStep * nbRows + xPad * 0.5;
         float fullWidth = HI_MaxCol1 + HI_MaxCol2 + xPad * 4.0;
         float thumbnailFrameHeight = Math::Min(fullRecordsHeight * screen.y - rowsHeight, fullWidth);
@@ -807,22 +807,22 @@ class MapInfo_UI : MapInfo_Data {
 
         // ! update nbRows if you add more DrawDataLabels
 
-        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Name", CleanName, NvgName, alpha);
-        // pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Name", CleanName);
-        vec2 authorBtnPos = pos.xy;
-        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Author", AuthorDisplayName, null, 1.0, TMioAuthorButton, tmIOLogo);
+        pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Name", CleanName, NvgName, alpha);
+        // pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Name", CleanName);
+        vec2 authorBtnPos = pos.xyz.xy;
+        pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Author", AuthorDisplayName, null, 1.0, TMioAuthorButton, tmIOLogo);
         authorBtnPos += vec2(col2X + pos.w + xPad, -fs * 0.05);
-        // pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Author WSID", AuthorWebServicesUserId);
-        // pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Author AcctID", AuthorAccountId);
-        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Published", DateStr, null, 1.0, TMioButton, tmIOLogo);
+        // pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Author WSID", AuthorWebServicesUserId);
+        // pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Author AcctID", AuthorAccountId);
+        pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Published", DateStr, null, 1.0, TMioButton, tmIOLogo);
         if (drawTotd)
-            pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "TOTD", TOTDStr);
-        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "# Finishes", NbPlayersStr + " (" + TodaysDate + ")");
-        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, "Worst Time", WorstTimeStr);
+            pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "TOTD", TOTDStr);
+        pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "# Finishes", NbPlayersStr + " (" + TodaysDate + ")");
+        pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Worst Time", WorstTimeStr);
 
-        vec2 tmxLinePos = pos.xy; // + vec2(col2X + nvg::TextBounds(TrackIDStr).x + xPad, -fs * 0.05); // - vec2(xPad, xPad / 2.0);
+        vec2 tmxLinePos = pos.xyz.xy; // + vec2(col2X + nvg::TextBounds(TrackIDStr).x + xPad, -fs * 0.05); // - vec2(xPad, xPad / 2.0);
         const string tmxLineLabel = UploadedToTmDojo > 0 ? "TM{X,Dojo}" : "TMX";
-        pos = DrawDataLabels(pos.xy, col, yStep, col2X, fs, tmxLineLabel, TrackIDStr, null, 1.0, TMXButton, tmxLogo);
+        pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, tmxLineLabel, TrackIDStr, null, 1.0, TMXButton, tmxLogo);
         tmxLinePos += vec2(col2X + pos.w + xPad, -fs * 0.05);
 
         // tmdojo button is a square with xpad/2 padding around a square that's the same as the font size
@@ -850,7 +850,7 @@ class MapInfo_UI : MapInfo_Data {
 
         if (ThumbnailTexture !is null) {
             vec2 size = vec2(thumbnailHeight, thumbnailHeight);
-            vec2 _tl = pos.xy + vec2(fullWidth, 0) / 2.0 - vec2(size.x / 2.0, 0);
+            vec2 _tl = pos.xyz.xy + vec2(fullWidth, 0) / 2.0 - vec2(size.x / 2.0, 0);
             nvg::ClosePath();
             nvg::BeginPath();
             nvg::Rect(_tl, size);
