@@ -10,7 +10,7 @@ set -e
 # https://greengumdrops.net/index.php/colorize-your-bash-scripts-bash-color-library/
 source ./vendor/_colors.bash
 
-_build_mode=${1:-dev}
+_build_mode=${1:-release}
 
 case $_build_mode in
   dev|release|prerelease|unittest)
