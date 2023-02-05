@@ -408,6 +408,8 @@ class MapInfo_Data {
         if (GetApp().PlaygroundScript is null) return false;
         auto cmap = GetApp().Network.ClientManiaAppPlayground;
         if (cmap is null || cmap.UILayers.Length < 2) return false;
+        if (!IsUISequencePlayingOrFinish(cmap.UI.UISequence)) return true;
+        // do we ever show mapinfo outside of Playing/Finish?
         if (IsUISequencePlayingOrFinish(cmap.UI.UISequence)) return false;
         if (soloEndMenuFrame !is null && soloStartMenuFrame !is null) {
             return soloStartMenuFrame.Visible || soloEndMenuFrame.Visible;
@@ -507,7 +509,7 @@ class MapInfo_Data {
             @slideFrame = frame.Controls[1];
             if (slideFrame.ControlId != "frame-slide") throw("should be slide-frame");
         }
-        if (!slideFrame.Parent.Visible) return false;
+        if (slideFrame.Parent !is null && !slideFrame.Parent.Visible) return false;
         slideFrameProgress = (slideFrame.RelativePosition_V3.x + 61.0) / 61.0;
         return slideFrameProgress > 0.0;
     }
