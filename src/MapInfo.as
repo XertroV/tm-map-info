@@ -324,11 +324,19 @@ class MapInfo_Data {
     }
 
     void OnClickTmxButton() {
+#if DEPENDENCY_MANIAEXCHANGE
+        ManiaExchange::ShowMapInfo(TrackID);
+#else
         OpenBrowserURL("https://trackmania.exchange/s/tr/" + TrackID);
+#endif
     }
 
     void OnClickTmxAuthorButton() {
+#if DEPENDENCY_MANIAEXCHANGE
+        ManiaExchange::ShowUserInfo(TMXAuthorID);
+#else
         OpenBrowserURL("https://trackmania.exchange/user/profile/" + TMXAuthorID);
+#endif
     }
 
     const string GetTMioURL() {
