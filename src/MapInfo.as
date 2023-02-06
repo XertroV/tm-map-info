@@ -325,7 +325,10 @@ class MapInfo_Data {
 
     void OnClickTmxButton() {
 #if DEPENDENCY_MANIAEXCHANGE
-        ManiaExchange::ShowMapInfo(TrackID);
+        if (Meta::GetPluginFromID("ManiaExchange").Enabled)
+            ManiaExchange::ShowMapInfo(TrackID);
+        else
+            OpenBrowserURL("https://trackmania.exchange/s/tr/" + TrackID);
 #else
         OpenBrowserURL("https://trackmania.exchange/s/tr/" + TrackID);
 #endif
@@ -333,7 +336,10 @@ class MapInfo_Data {
 
     void OnClickTmxAuthorButton() {
 #if DEPENDENCY_MANIAEXCHANGE
-        ManiaExchange::ShowUserInfo(TMXAuthorID);
+        if (Meta::GetPluginFromID("ManiaExchange").Enabled)
+            ManiaExchange::ShowUserInfo(TMXAuthorID);
+        else
+            OpenBrowserURL("https://trackmania.exchange/user/profile/" + TMXAuthorID);
 #else
         OpenBrowserURL("https://trackmania.exchange/user/profile/" + TMXAuthorID);
 #endif
