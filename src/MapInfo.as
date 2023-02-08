@@ -73,6 +73,7 @@ class MapInfo_Data {
     string AuthorAccountId = "";
     string AuthorDisplayName = "";
     string AuthorWebServicesUserId = "";
+    string AuthorCountryFlag = "";
     string FileName = "";
     string FileUrl = "";
     string ThumbnailUrl = "";
@@ -122,7 +123,7 @@ class MapInfo_Data {
         SetName(map.MapName);
         author = map.AuthorNickName;
         AuthorDisplayName = map.MapInfo.AuthorNickName;
-
+        AuthorCountryFlag = map.AuthorZoneIconUrl.SubStr(map.AuthorZoneIconUrl.Length - 7);
         StartInitializationCoros();
     }
 
@@ -564,6 +565,14 @@ class MapInfo_Data {
 class MapInfo_UI : MapInfo_Data {
     MapInfo_UI() {
         super();
+
+        // load the flag texture if we're using it
+        if (S_Nationalism && AuthorCountryFlag.EndsWith(".dds")) {
+            @flagTexture = nvg::LoadTexture("img/Flags/" + AuthorCountryFlag.Replace(".dds", ".png"));
+            if (flagTexture is null || flagTexture.GetSize().x == 0 || flagTexture.GetSize().y == 0) { // failed to load
+                @flagTexture = null;
+            }
+        }
     }
 
     // todo: we should be able to pull most of these values from the records UI widget.
@@ -597,6 +606,8 @@ class MapInfo_UI : MapInfo_Data {
         bounds.w = heightProp * screen.y;
         return bounds;
     }
+
+    nvg::Texture@ flagTexture;
 
     AnimMgr@ mainAnim = AnimMgr();
     AnimMgr@ hoverAnim = AnimMgr();
@@ -812,7 +823,7 @@ class MapInfo_UI : MapInfo_Data {
         pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Name", CleanName, NvgName, alpha);
         // pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Name", CleanName);
         vec2 authorBtnPos = pos.xyz.xy;
-        pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Author", AuthorDisplayName, null, 1.0, TMioAuthorButton, tmIOLogo);
+        pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Author", AuthorDisplayName, null, 1.0, TMioAuthorButton, tmIOLogo, flagTexture);
         authorBtnPos += vec2(col2X + pos.w + xPad, -fs * 0.05);
         // pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Author WSID", AuthorWebServicesUserId);
         // pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Author AcctID", AuthorAccountId);
@@ -879,11 +890,12 @@ class MapInfo_UI : MapInfo_Data {
         nvg::Fill();
     }
 
-    vec4 DrawDataLabels(vec2 pos, vec4 col, float yStep, float col2X, float fs, const string &in label, const string &in value, NvgText@ textObj = null, float alpha = 1.0, NvgButton@ button = null, nvg::Texture@ extraLogoForBtn = null) {
+    vec4 DrawDataLabels(vec2 pos, vec4 col, float yStep, float col2X, float fs, const string &in label, const string &in value, NvgText@ textObj = null, float alpha = 1.0, NvgButton@ button = null, nvg::Texture@ extraLogoForBtn = null, nvg::Texture@ authorFlagTexture = null) {
         auto labelTB = nvg::TextBounds(label);
         auto valueTB = nvg::TextBounds(value);
         nvg::FillColor(col);
         nvg::Text(pos, label);
+
         vec2 c2Pos = pos + vec2(col2X, 0);
         vec2 c2Size = valueTB;
 
@@ -895,7 +907,15 @@ class MapInfo_UI : MapInfo_Data {
                 c2Size.x += xPad / 2.0 + fs;
                 drawLogo = true;
             }
+            if (authorFlagTexture !is null) {
+                c2Size.x += xPad / 2.0 + (fs*1.42f);
+            }
             button.DrawButton(c2Pos + shapeOffs, c2Size, vec4(1, 1, 1, 1), vec2(xPad, xPad) / 2.0, mainAnim.Progress);
+        }
+
+        if (authorFlagTexture !is null) {
+            DrawTexture(c2Pos + shapeOffs, vec2(fs*1.42f, fs), authorFlagTexture);
+            c2Pos.x += xPad / 2.0 + (fs*1.42f);
         }
 
         if (textObj is null) {
