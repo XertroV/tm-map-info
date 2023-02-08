@@ -14,4 +14,28 @@ namespace TMX {
         // log_info("Debug tmx get map by uid: " + req.String());
         return Json::Parse(req.String());
     }
+
+    void OpenTmxTrack(int TrackID) {
+#if DEPENDENCY_MANIAEXCHANGE
+        try {
+            if (S_OpenTmxInManiaExchange && Meta::GetPluginFromID("ManiaExchange").Enabled) {
+                ManiaExchange::ShowMapInfo(TrackID);
+                return;
+            }
+        } catch {}
+#endif
+        OpenBrowserURL("https://trackmania.exchange/s/tr/" + TrackID);
+    }
+
+    void OpenTmxAuthor(int TMXAuthorID) {
+#if DEPENDENCY_MANIAEXCHANGE
+        try {
+            if (S_OpenTmxInManiaExchange && Meta::GetPluginFromID("ManiaExchange").Enabled) {
+                ManiaExchange::ShowUserInfo(TMXAuthorID);
+                return;
+            }
+        } catch {}
+#endif
+        OpenBrowserURL("https://trackmania.exchange/user/profile/" + TMXAuthorID);
+    }
 }

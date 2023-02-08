@@ -324,25 +324,11 @@ class MapInfo_Data {
     }
 
     void OnClickTmxButton() {
-#if DEPENDENCY_MANIAEXCHANGE
-        if (Meta::GetPluginFromID("ManiaExchange").Enabled)
-            ManiaExchange::ShowMapInfo(TrackID);
-        else
-            OpenBrowserURL("https://trackmania.exchange/s/tr/" + TrackID);
-#else
-        OpenBrowserURL("https://trackmania.exchange/s/tr/" + TrackID);
-#endif
+        TMX::OpenTmxTrack(TrackID);
     }
 
     void OnClickTmxAuthorButton() {
-#if DEPENDENCY_MANIAEXCHANGE
-        if (Meta::GetPluginFromID("ManiaExchange").Enabled)
-            ManiaExchange::ShowUserInfo(TMXAuthorID);
-        else
-            OpenBrowserURL("https://trackmania.exchange/user/profile/" + TMXAuthorID);
-#else
-        OpenBrowserURL("https://trackmania.exchange/user/profile/" + TMXAuthorID);
-#endif
+        TMX::OpenTmxAuthor(TMXAuthorID);
     }
 
     const string GetTMioURL() {
