@@ -8,7 +8,7 @@ bool S_ShowLoadingScreenInfo = true;
 float S_LoadingScreenYOffsetPct = 12.0;
 
 [Setting category="General" name="Show author flags"]
-bool S_Nationalism = true;
+bool S_ShowAuthorFlags = true;
 
 [Setting category="General" name="Show Debug Window (must be in a map)"]
 bool S_ShowDebugUI = false;

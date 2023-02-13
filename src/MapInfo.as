@@ -572,7 +572,7 @@ class MapInfo_UI : MapInfo_Data {
     // Call this only during `Render()`! Loading textures from outside the render function can crash the game.
     void CheckLoadCountryFlag() {
         // load the flag texture if we're using it
-        if (!LoadingFlagFailed && flagTexture is null && S_Nationalism && AuthorCountryFlag.EndsWith(".dds")) {
+        if (!LoadingFlagFailed && flagTexture is null && S_ShowAuthorFlags && AuthorCountryFlag.EndsWith(".dds")) {
             @flagTexture = nvg::LoadTexture("img/Flags/" + AuthorCountryFlag.Replace(".dds", ".png"));
             if (flagTexture is null || flagTexture.GetSize().x == 0 || flagTexture.GetSize().y == 0) { // failed to load
                 @flagTexture = null;
