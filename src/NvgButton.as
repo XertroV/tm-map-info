@@ -14,10 +14,10 @@ class NvgButton {
     vec2 lastTL = vec2(-1, -1);
     vec2 lastSize = vec2(-1, -1);
 
-    void DrawButton(vec2 textPos, vec2 textSize, vec4 textCol, vec2 padding, float clampMax) {
+    void DrawButton(vec2 textPos, vec2 textSize, vec4 textCol, vec2 padding, float clampMax, float xScale) {
         vec2 tl = textPos - padding;
         vec2 size = textSize + padding * 2.0;
-        bool growing = IsWithin(g_MouseCoords, tl, size);
+        bool growing = IsWithin(g_MouseCoords, tl * vec2(xScale, 1), size * vec2(xScale, 1));
 
         if (!anim.Update(growing, clampMax)) return;
         float alpha = anim.Progress;

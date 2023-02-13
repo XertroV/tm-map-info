@@ -492,14 +492,19 @@ class MapInfo_Data {
 
     private bool openedExploreNod = false;
     private CGameManialinkControl@ slideFrame = null;
+    private CGameManialinkFrame@ Race_Record_Frame = null;
+    vec2 mainFrameAbsPos;
+    float mainFrameAbsScale;
     private bool IsRecordElementVisible() {
         auto cmap = GetApp().Network.ClientManiaAppPlayground;
         if (cmap is null) return false;
-        if (slideFrame is null) {
+        if (slideFrame is null || Race_Record_Frame is null) {
             if (lastRecordsLayerIndex >= cmap.UILayers.Length) return false;
             auto layer = cmap.UILayers[lastRecordsLayerIndex];
             if (layer is null) return false;
             auto frame = cast<CGameManialinkFrame>(layer.LocalPage.GetFirstChild("frame-records"));
+            @Race_Record_Frame = cast<CGameManialinkFrame>(frame.Parent);
+            if (Race_Record_Frame is null) return false;
             // should always be visible
             if (frame is null || !frame.Visible) return false;
             // if (!openedExploreNod) {
@@ -510,7 +515,12 @@ class MapInfo_Data {
             @slideFrame = frame.Controls[1];
             if (slideFrame.ControlId != "frame-slide") throw("should be slide-frame");
         }
+        if (Race_Record_Frame !is null && !Race_Record_Frame.Visible) return false;
         if (slideFrame.Parent !is null && !slideFrame.Parent.Visible) return false;
+        mainFrameAbsPos = Race_Record_Frame.AbsolutePosition_V3;
+        mainFrameAbsScale = Race_Record_Frame.AbsoluteScale;
+        // if the abs scale is too low (or negative) it causes problems. no legit case is like this so just set to 1
+        if (mainFrameAbsScale <= 0.05) mainFrameAbsScale = 1.0;
         slideFrameProgress = (slideFrame.RelativePosition_V3.x + 61.0) / 61.0;
         return slideFrameProgress > 0.0;
     }
@@ -594,16 +604,26 @@ class MapInfo_UI : MapInfo_Data {
     vec2 screen = baseRes;
     vec4 bounds = vec4(-10, -1, -1, -1);
     float xPad = 20.;
+    vec2 recordsTL;
+    vec2 recordsFullSize;
+    float widthSquish;
 
     vec4 UpdateBounds() {
         screen = vec2(Draw::GetWidth(), Draw::GetHeight());
+        if (screen.x == 0 || screen.y == 0) screen = baseRes;
         vec2 midPoint = screen / 2.0;
+        // if we are <16:9 res, then we get squished width
         float screenScale = screen.y / baseRes.y;
-        vec2 tr = midPoint + (trOffs * baseRes) * screenScale;
+        widthSquish = Math::Min(1., screen.x / (baseRes.x * screenScale));
+
+        recordsTL = (mainFrameAbsPos * vec2(widthSquish, -1)) / 180 * (screen.y) + midPoint;
+        recordsFullSize = vec2(fullWidthProp * mainFrameAbsScale * screen.y, 200);
+
+        vec2 tr = recordsTL + vec2(fullWidthProp * screen.y * mainFrameAbsScale, 0);
         bounds.x = tr.x;
         bounds.y = tr.y;
         bounds.z = 0;
-        bounds.w = heightProp * screen.y;
+        bounds.w = heightProp * screen.y * mainFrameAbsScale;
         return bounds;
     }
 
@@ -631,15 +651,21 @@ class MapInfo_UI : MapInfo_Data {
 
         auto rect = UpdateBounds();
 
-        float fs = fontProp * screen.y;
-        xPad = xPaddingProp * screen.y;
-        float gap = gapProp * screen.y;
+        float fs = fontProp * screen.y * mainFrameAbsScale;
+        xPad = xPaddingProp * screen.y; // * mainFrameAbsScale
+        float gap = gapProp * screen.y * mainFrameAbsScale;
+
         // check max size assuming refresh-leadersboards exists
-        float recordsWidth = fullWidthProp * screen.y;
+        float recordsWidth = fullWidthProp * screen.y * mainFrameAbsScale;
         float maxTextSize = recordsWidth - (rect.w + gap + xPad) * 2.0;
+        // if this is happening something is not right
+        if (maxTextSize <= 0) return;
+
         string mainLabel = Icons::Users + " " + NbPlayersStr;
 
         nvg::Reset();
+
+        nvg::Scale(widthSquish, 1);
 
         nvg::FontFace(g_NvgFont);
         nvg::FontSize(fs);
@@ -654,7 +680,7 @@ class MapInfo_UI : MapInfo_Data {
             textSize.x = maxTextSize;
         }
 
-        float width = xPad * 2.0 + textSize.x;
+        float width = xPad * 2.0 + textSize.x * mainFrameAbsScale;
         rect.x -= width;
         rect.z = width;
         float textHOffset = rect.w * .55 - textSize.y / 2.0;
@@ -662,12 +688,7 @@ class MapInfo_UI : MapInfo_Data {
         // debug rectangles drawn around records arrow and refresh lederboards (if it were pixel perfect)
         // DrawDebugRect(rect.xyz.xy + vec2(width - recordsWidth, 0), vec2(rect.w, rect.w));
         // DrawDebugRect(rect.xyz.xy + vec2(width - recordsWidth + rect.w + gap, 0), vec2(rect.w, rect.w));
-
-        // code to calc perfect position for refresh leaderboards button -- might be useful in future
-        // float IdealWidth = Math::Min(ScreenWidth, ScreenHeight * 16.0 / 9.0);
-        // float AspectDiff = Math::Max(0.0, ScreenWidth / ScreenHeight - 16.0 / 9.0) / 2.0;
-        // ButtonPosX = (0.028 * IdealWidth + ScreenHeight * AspectDiff) / ScreenWidth;
-        // DrawDebugRect(vec2(ButtonPosX * ScreenWidth, rect.y), vec2(rect.w, rect.w));
+        // DrawDebugRect(recordsTL, recordsFullSize);
 
         // animate sliding away when record UI opens/closes
         // first, set up a scissor similar to the records UI
@@ -688,8 +709,9 @@ class MapInfo_UI : MapInfo_Data {
         nvg::ResetScissor();
         nvg::ResetTransform();
 
-        bool rawHover = IsWithin(g_MouseCoords, rect.xyz.xy, vec2(rect.z, rect.w) + vec2(gap, 0))
-            || IsWithin(g_MouseCoords, rect.xyz.xy + vec2(rect.z + gap, 0), lastMapInfoSize);
+        vec2 hoverScale(widthSquish, 1);
+        bool rawHover = IsWithin(g_MouseCoords, rect.xyz.xy * hoverScale, vec2(rect.z * widthSquish, rect.w) + vec2(gap, 0))
+            || IsWithin(g_MouseCoords, rect.xyz.xy * hoverScale + vec2(rect.z * widthSquish + gap, 0), lastMapInfoSize);
             ;
         if (hoverAnim.Update(!closed && rawHover, slideFrameProgress)) {
             DrawHoveredInterface(rect, fs, textHOffset, gap);
@@ -784,6 +806,7 @@ class MapInfo_UI : MapInfo_Data {
         float yStep = rect.w * HoverInterfaceScale;
         nvg::TextAlign(nvg::Align::Top | nvg::Align::Left);
         nvg::FontSize(fs);
+        nvg::Scale(widthSquish, 1);
 
         bool drawTotd = TOTDStr.Length > 0;
 
@@ -846,12 +869,12 @@ class MapInfo_UI : MapInfo_Data {
         float farRightBound = tl.x + fullWidth;
         float btnSpaceNeeded = fs + xPad*2.0;
         if (tmDojoLogo !is null && @TmDojoButton !is null && tmxLinePos.x + btnSpaceNeeded < farRightBound) {
-            TmDojoButton.DrawButton(tmxLinePos, btnLogoSize, vec4(), halfPad, mainAnim.Progress);
+            TmDojoButton.DrawButton(tmxLinePos, btnLogoSize, vec4(), halfPad, mainAnim.Progress, widthSquish);
             DrawTexture(tmxLinePos, btnLogoSize, tmDojoLogo, 1.0);
         }
 
         if (tmxLogo !is null && @TMXAuthorButton !is null && authorBtnPos.x + btnSpaceNeeded < farRightBound) {
-            TMXAuthorButton.DrawButton(authorBtnPos, btnLogoSize, vec4(), halfPad, mainAnim.Progress);
+            TMXAuthorButton.DrawButton(authorBtnPos, btnLogoSize, vec4(), halfPad, mainAnim.Progress, widthSquish);
             DrawTexture(authorBtnPos, btnLogoSize, tmxLogo);
             authorBtnPos.x += xPad + fs;
         }
@@ -910,7 +933,7 @@ class MapInfo_UI : MapInfo_Data {
             if (authorFlagTexture !is null) {
                 c2Size.x += xPad / 2.0 + (fs*1.42f);
             }
-            button.DrawButton(c2Pos + shapeOffs, c2Size, vec4(1, 1, 1, 1), vec2(xPad, xPad) / 2.0, mainAnim.Progress);
+            button.DrawButton(c2Pos + shapeOffs, c2Size, vec4(1, 1, 1, 1), vec2(xPad, xPad) / 2.0, mainAnim.Progress, widthSquish);
         }
 
         if (authorFlagTexture !is null) {

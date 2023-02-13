@@ -61,9 +61,10 @@ class NvgText {
     uint8 oChar = "o"[0];
     uint8 zChar = "z"[0];
     uint8 iChar = "i"[0];
+    uint8 gChar = "g"[0];
 
     bool IsASkipChar(uint8 char) {
-        return char == oChar || char == iChar || char == sChar || char == "<"[0] || char == ">"[0];
+        return char == oChar || char == gChar || char == iChar || char == sChar || char == "<"[0] || char == ">"[0];
     }
 
     float strokeIters = 9;
