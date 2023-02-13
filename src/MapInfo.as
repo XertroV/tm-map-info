@@ -205,16 +205,6 @@ class MapInfo_Data {
 
     void LoadThumbnail() {
         @Textures = TextureCache::Get(ThumbnailUrl);
-        // auto req = Net::HttpGet(ThumbnailUrl);
-        // while (!req.Finished()) yield();
-        // if (req.ResponseCode() != 200) {
-        //     warn('GET Thumbnail response: ' + req.ResponseCode());
-        //     return;
-        // }
-        // auto buf = req.Buffer();
-        // @ThumbnailTexture = nvg::LoadTexture(buf);
-        // buf.Seek(0);
-        // @UI_ThumbnailTexture = UI::LoadTexture(buf);
     }
 
     const string GetNbPlayersRange() {
@@ -986,6 +976,7 @@ class MapInfo_UI : MapInfo_Data {
                 DebugTableRowStr("AuthorAccountId", AuthorAccountId);
                 DebugTableRowStr("AuthorDisplayName", AuthorDisplayName);
                 DebugTableRowStr("AuthorWebServicesUserId", AuthorWebServicesUserId);
+                DebugTableRowStr("AuthorCountryFlag", AuthorCountryFlag);
                 DebugTableRowStr("FileName", FileName);
                 DebugTableRowStr("FileUrl", FileUrl);
                 DebugTableRowStr("ThumbnailUrl", ThumbnailUrl);
