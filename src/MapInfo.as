@@ -575,18 +575,21 @@ class MapInfo_Data {
 class MapInfo_UI : MapInfo_Data {
     MapInfo_UI() {
         super();
+    }
 
+    bool LoadingFlagFailed = false;
+
+    // Call this only during `Render()`! Loading textures from outside the render function can crash the game.
+    void CheckLoadCountryFlag() {
         // load the flag texture if we're using it
-        if (S_Nationalism && AuthorCountryFlag.EndsWith(".dds")) {
+        if (!LoadingFlagFailed && flagTexture is null && S_Nationalism && AuthorCountryFlag.EndsWith(".dds")) {
             @flagTexture = nvg::LoadTexture("img/Flags/" + AuthorCountryFlag.Replace(".dds", ".png"));
             if (flagTexture is null || flagTexture.GetSize().x == 0 || flagTexture.GetSize().y == 0) { // failed to load
                 @flagTexture = null;
+                LoadingFlagFailed = true;
             }
         }
     }
-
-    // todo: we should be able to pull most of these values from the records UI widget.
-    // This would be good to do b/c some servers will change the size/location of the widget (e.g., i've seen a pyplanet server with this).
 
     vec2 baseRes = vec2(2560.0, 1440.0);
     float heightProp = 64.0 / baseRes.y;
@@ -633,6 +636,8 @@ class MapInfo_UI : MapInfo_Data {
     AnimMgr@ hoverAnim = AnimMgr();
 
     void Draw() {
+        CheckLoadCountryFlag();
+
         if (!LoadedNbPlayers && Time::Now - LoadingStartedAt < 5000) return;
         auto cmap = GetApp().Network.ClientManiaAppPlayground;
         auto pgcsa = GetApp().Network.PlaygroundClientScriptAPI;
@@ -934,10 +939,11 @@ class MapInfo_UI : MapInfo_Data {
                 c2Size.x += xPad / 2.0 + (fs*1.42f);
             }
             button.DrawButton(c2Pos + shapeOffs, c2Size, vec4(1, 1, 1, 1), vec2(xPad, xPad) / 2.0, mainAnim.Progress, widthSquish);
+            // ! text must be the next thing drawn as the hover color is set by .DrawButton
         }
 
+        vec2 flagPos = c2Pos;
         if (authorFlagTexture !is null) {
-            DrawTexture(c2Pos + shapeOffs, vec2(fs*1.42f, fs), authorFlagTexture);
             c2Pos.x += xPad / 2.0 + (fs*1.42f);
         }
 
@@ -946,6 +952,8 @@ class MapInfo_UI : MapInfo_Data {
         } else {
             textObj.Draw(c2Pos, vec3(1, 1, 1), fs, alpha);
         }
+
+        if (authorFlagTexture !is null) DrawTexture(flagPos + shapeOffs, vec2(fs*1.42f, fs), authorFlagTexture);
         if (drawLogo) {
             c2Pos.x += valueTB.x + xPad / 2.0;
             DrawTexture(c2Pos + shapeOffs, vec2(fs, fs), extraLogoForBtn);
