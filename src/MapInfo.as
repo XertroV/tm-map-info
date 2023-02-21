@@ -323,7 +323,7 @@ class MapInfo_Data {
     }
 
     const string GetTMioURL() {
-        return "https://trackmania.io/#/leaderboard/" + uid;
+        return "https://trackmania.io/#/leaderboard/" + uid + "?utm_source=mapinfo-plugin";
     }
 
     void OnClickTMioButton() {
@@ -331,11 +331,11 @@ class MapInfo_Data {
     }
 
     void OnClickTMioAuthorButton() {
-        OpenBrowserURL("https://trackmania.io/#/player/" + AuthorWebServicesUserId);
+        OpenBrowserURL("https://trackmania.io/#/player/" + AuthorWebServicesUserId + "?utm_source=mapinfo-plugin");
     }
 
     void OnClickTMDojoButton() {
-        OpenBrowserURL("https://tmdojo.com/maps/" + uid);
+        OpenBrowserURL("https://tmdojo.com/maps/" + uid + "?utm_source=mapinfo-plugin");
     }
 
     bool IsGoodUISequence(CGamePlaygroundUIConfig::EUISequence uiSeq) {
