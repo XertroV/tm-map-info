@@ -493,6 +493,7 @@ class MapInfo_Data {
             auto layer = cmap.UILayers[lastRecordsLayerIndex];
             if (layer is null) return false;
             auto frame = cast<CGameManialinkFrame>(layer.LocalPage.GetFirstChild("frame-records"));
+            if (frame is null) return false;
             @Race_Record_Frame = cast<CGameManialinkFrame>(frame.Parent);
             if (Race_Record_Frame is null) return false;
             // should always be visible
