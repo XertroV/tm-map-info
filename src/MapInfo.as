@@ -140,6 +140,10 @@ class MapInfo_Data {
         startnew(CoroutineFunc(this.MonitorRecordsVisibility));
     }
 
+    void RefreshTOTDStatus() {
+        startnew(CoroutineFunc(this.GetMapTOTDStatus));
+    }
+
     bool OnMouseButton(bool down, int button) {
         return (TMXButton !is null && TMXButton.OnMouseClick(down, button))
             || (TMioButton !is null && TMioButton.OnMouseClick(down, button))
@@ -733,7 +737,7 @@ class MapInfo_UI : MapInfo_Data {
         auto bls = Meta::GetPluginFromID("BetterLoadingScreen");
         bool drawOverBLS = bls !is null && bls.Enabled;
 
-        vec2 screen = vec2(Draw::GetWidth(), Draw::GetHeight());
+        vec2 screen = vec2(Draw::GetWidth(), Math::Max(1, Draw::GetHeight()));
         float fs = drawOverBLS ? 40.0 : (fontProp * screen.y);
         float yTop = screen.y * S_LoadingScreenYOffsetPct / 100.0;
         float gap = fs / 4.0;

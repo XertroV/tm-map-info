@@ -1,5 +1,6 @@
 namespace TOTD {
     bool initialized = false;
+    bool totdQuickLoad = false;
     dictionary uidToTimestamp;
     dictionary uidToDate;
     dictionary uidToDaysAgo;
@@ -10,7 +11,7 @@ namespace TOTD {
     void LoadTOTDs() {
         if (initialized) return;
 
-        auto resp = Live::GetTotdByMonth();
+        auto resp = Live::GetTotdByMonth(totdQuickLoad ? 1 : 100);
         if (resp.GetType() != Json::Type::Object) {
             log_warn("LoadTOTDs got bad response: " + Json::Write(resp));
             sleep(10000);
@@ -35,7 +36,8 @@ namespace TOTD {
 
                 uidToTimestamp.Set(uid, totd["startTimestamp"]);
                 uidToDate.Set(uid, FmtTimestampDateOnlyUTC(uint(totd["startTimestamp"])));
-                uidToDaysAgo.Set(uid, daysAgo);
+                if (!uidToDaysAgo.Exists(uid))
+                    uidToDaysAgo.Set(uid, daysAgo);
                 daysAgo++;
                 // auto ts = uint(totd['startTimestamp']);
                 // trace(tostring(ts) + ": " + FmtTimestamp(ts));
@@ -47,8 +49,16 @@ namespace TOTD {
     /** Sleeps until a new TOTD is ready */
     void LoadNextTOTD() {
         int sleepFor = Math::Min(nextTotdInSeconds, Math::Max(0, nextTotdTs - Time::Stamp));
+        log_trace("Waiting before getting next TOTDs: " + sleepFor + " ms");
         sleep(sleepFor * 1000);
+        log_trace("Getting new TOTDs...");
         initialized = false;
+        totdQuickLoad = true;
+        auto daysAgoKeys = uidToDaysAgo.GetKeys();
+        for (uint i = 0; i < daysAgoKeys.Length; i++) {
+            uidToDaysAgo[daysAgoKeys[i]] = 1 + int(uidToDaysAgo[daysAgoKeys[i]]);
+        }
+        if (g_MapInfo !is null) g_MapInfo.RefreshTOTDStatus();
         LoadTOTDs();
     }
 
