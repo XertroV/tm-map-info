@@ -101,7 +101,8 @@ class MapInfo_Data {
     uint NbPlayers = LoadingNbPlayersFlag;
     uint WorstTime = 0;
     string NbPlayersStr = "...";
-    string WorstTimeStr = "";
+    string WorstTimeStr = "...";
+    string AuthorTimeStr = "...";
 
     string TOTDDate = "";
     int TOTDDaysAgo = -1;
@@ -192,6 +193,7 @@ class MapInfo_Data {
         GoldScore = info.GoldScore;
         SilverScore = info.SilverScore;
         BronzeScore = info.BronzeScore;
+        AuthorTimeStr = Time::Format(AuthorScore);
 
         LoadedMapData = true;
         log_trace('MapInfo_Data loaded map data');
@@ -731,7 +733,10 @@ class MapInfo_UI : MapInfo_Data {
         if (TOTDStr.Length > 0)
             lines.InsertLast("TOTD: " + TOTDStr);
         lines.InsertLast("# Finishes: " + NbPlayersStr);
-        lines.InsertLast("Worst Time: " + WorstTimeStr);
+        if (S_ShowWhichTime == ShowTimeSetting::Worst_Time)
+            lines.InsertLast("Worst Time: " + WorstTimeStr);
+        else if (S_ShowWhichTime == ShowTimeSetting::Author_Time)
+            lines.InsertLast("Author Time: " + AuthorTimeStr);
         lines.InsertLast("TMX: " + TrackIDStr);
 
         auto bls = Meta::GetPluginFromID("BetterLoadingScreen");
@@ -854,7 +859,10 @@ class MapInfo_UI : MapInfo_Data {
         if (drawTotd)
             pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "TOTD", TOTDStr);
         pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "# Finishes", NbPlayersStr + " (" + TodaysDate + ")");
-        pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Worst Time", WorstTimeStr);
+
+        bool showWtNotAt = S_ShowWhichTime == ShowTimeSetting::Worst_Time;
+        string _wtLabel = showWtNotAt ? "Worst Time" : "Author Time";
+        pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, _wtLabel, showWtNotAt ? WorstTimeStr : AuthorTimeStr);
 
         vec2 tmxLinePos = pos.xyz.xy; // + vec2(col2X + nvg::TextBounds(TrackIDStr).x + xPad, -fs * 0.05); // - vec2(xPad, xPad / 2.0);
         const string tmxLineLabel = UploadedToTmDojo > 0 ? "TM{X,Dojo}" : "TMX";
