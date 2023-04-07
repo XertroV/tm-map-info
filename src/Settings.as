@@ -1,6 +1,13 @@
 [Setting hidden]
 bool S_ShowMapInfo = true;
 
+enum ShowTimeSetting {
+    Author_Time,
+    Worst_Time
+}
+[Setting category="General" name="Show worst time or author time"]
+ShowTimeSetting S_ShowWhichTime = ShowTimeSetting::Worst_Time;
+
 [Setting category="General" name="Show map info on loading screen"]
 bool S_ShowLoadingScreenInfo = true;
 
