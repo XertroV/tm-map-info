@@ -967,6 +967,54 @@ class MapInfo_UI : MapInfo_Data {
         return vec4(pos.x, pos.y, labelTB.x, c2Size.x);
     }
 
+        void Draw_PersistentUI() {
+        if (!S_ShowPersistentUI) return;
+
+        UI::SetNextWindowSize(800, 500, UI::Cond::FirstUseEver);
+        if (UI::Begin("\\$8f0" + Icons::Map + "\\$z " + Name + " \\$666by\\$z " + AuthorDisplayName + "###MapInfoPersistent", S_ShowPersistentUI, UI::WindowFlags::AlwaysAutoResize)) {
+            if (UI::BeginTable("mapInfoPersistent", 2, UI::TableFlags::SizingFixedFit)) {
+                UI::TableSetupColumn("key", UI::TableColumnFlags::WidthFixed);
+                UI::TableSetupColumn("value", UI::TableColumnFlags::WidthStretch);
+
+                if (SP_ShowPubDate)   PersistentTableRowStr("Published", DateStr);
+                if (SP_ShowTotDDate)  PersistentTableRowStr("TotD", TOTDStr);
+                if (SP_ShowNbPlayers) PersistentTableRowStr("Players", NbPlayersStr);
+                if (SP_ShowWorstTime) PersistentTableRowStr("Worst Time", WorstTimeStr);
+
+                if (SP_ShowTMXDojo) {
+                    UI::PushID("tmxID");
+
+                    UI::TableNextRow();
+                    UI::TableNextColumn();
+                    UI::Text("TMX Map ID");
+                    UI::TableNextColumn();
+                    UI::Text(TrackIDStr);
+
+                    if (UI::Button("TMX")) OnClickTmxButton();
+                    UI::SameLine();
+                    if (UI::Button("TMDojo")) OnClickTMDojoButton();
+
+                    UI::PopID();
+                }
+
+                UI::EndTable();
+            }
+        }
+        UI::End();
+    }
+
+    void PersistentTableRowStr(const string &in key, const string &in value) {
+        UI::PushID(key);
+
+        UI::TableNextRow();
+        UI::TableNextColumn();
+        UI::Text(key);
+        UI::TableNextColumn();
+        UI::Text(value);
+
+        UI::PopID();
+    }
+
 
 
     void Draw_DebugUI() {

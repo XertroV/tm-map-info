@@ -58,6 +58,7 @@ void Render() {
             LoadTextures();
         g_MapInfo.Draw();
         if (S_ShowDebugUI) g_MapInfo.Draw_DebugUI();
+        if (S_ShowPersistentUI) g_MapInfo.Draw_PersistentUI();
 
         auto loadProgress = GetApp().LoadProgress;
         isLoading = loadProgress !is null && loadProgress.State != NGameLoadProgress_SMgr::EState::Disabled;

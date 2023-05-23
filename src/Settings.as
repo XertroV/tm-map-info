@@ -34,3 +34,21 @@ bool S_OpenTmxInManiaExchange = true;
 #else
 bool S_OpenTmxInManiaExchange = false;
 #endif
+
+[Setting category="Persistent Window" name="Show Persistent Window" description="Note: this is currently kinda rough, but will get a cleanup pass in the near future"]
+bool S_ShowPersistentUI = false;
+
+[Setting category="Persistent Window" name="Show map publish date"]
+bool SP_ShowPubDate = true;
+
+[Setting category="Persistent Window" name="Show TotD date"]
+bool SP_ShowTotDDate = true;
+
+[Setting category="Persistent Window" name="Show number of players"]
+bool SP_ShowNbPlayers = true;
+
+[Setting category="Persistent Window" name="Show worst time"]
+bool SP_ShowWorstTime = true;
+
+[Setting category="Persistent Window" name="Show TMX/Dojo ID"]
+bool SP_ShowTMXDojo = true;
