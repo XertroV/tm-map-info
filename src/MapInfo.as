@@ -489,8 +489,11 @@ class MapInfo_Data {
     private bool openedExploreNod = false;
     private CGameManialinkControl@ slideFrame = null;
     private CGameManialinkFrame@ Race_Record_Frame = null;
+    private CGameManialinkFrame@ rankingsFrame = null;
     vec2 mainFrameAbsPos;
     float mainFrameAbsScale;
+    uint nbRecordsShown = 0;
+
     private bool IsRecordElementVisible() {
         auto cmap = GetApp().Network.ClientManiaAppPlayground;
         if (cmap is null) return false;
@@ -511,9 +514,19 @@ class MapInfo_Data {
             if (frame.Controls.Length < 2) return false;
             @slideFrame = frame.Controls[1];
             if (slideFrame.ControlId != "frame-slide") throw("should be slide-frame");
+            @rankingsFrame = cast<CGameManialinkFrame>(Race_Record_Frame.GetFirstChild("frame-ranking"));
         }
         if (Race_Record_Frame !is null && !Race_Record_Frame.Visible) return false;
         if (slideFrame.Parent !is null && !slideFrame.Parent.Visible) return false;
+
+        if (rankingsFrame !is null) {
+            nbRecordsShown = 0;
+            for (uint i = 0; i < rankingsFrame.Controls.Length; i++) {
+                auto item = rankingsFrame.Controls[i];
+                if (item.Visible) nbRecordsShown++;
+            }
+        }
+
         mainFrameAbsPos = Race_Record_Frame.AbsolutePosition_V3;
         mainFrameAbsScale = Race_Record_Frame.AbsoluteScale;
         // if the abs scale is too low (or negative) it causes problems. no legit case is like this so just set to 1
@@ -605,8 +618,11 @@ class MapInfo_UI : MapInfo_Data {
     vec4 bounds = vec4(-10, -1, -1, -1);
     float xPad = 20.;
     vec2 recordsTL;
-    vec2 recordsFullSize;
+    // vec2 recordsFullSize;
     float widthSquish;
+    float recordsGuessedHeight;
+    float extraHeightBelowRecords = 0;
+    bool showingMaxRecords = false;
 
     vec4 UpdateBounds() {
         screen = vec2(Draw::GetWidth(), Draw::GetHeight());
@@ -617,13 +633,29 @@ class MapInfo_UI : MapInfo_Data {
         widthSquish = Math::Min(1., screen.x / (baseRes.x * screenScale));
 
         recordsTL = (mainFrameAbsPos * vec2(widthSquish, -1)) / 180 * (screen.y) + midPoint;
-        recordsFullSize = vec2(fullWidthProp * mainFrameAbsScale * screen.y, 200);
+        // recordsFullSize = vec2(fullWidthProp * mainFrameAbsScale * screen.y, 200);
 
         vec2 tr = recordsTL + vec2(fullWidthProp * screen.y * mainFrameAbsScale, 0);
         bounds.x = tr.x;
         bounds.y = tr.y;
         bounds.z = 0;
         bounds.w = heightProp * screen.y * mainFrameAbsScale;
+
+        // an odd sized records window happens for a few reasons:
+        // - less than 8 records (or player is last and 7 records)
+        // - track not uploaded / other error (size: 50. 24.)
+        // - no records / loading (size: 50. 6.)
+        //
+        // note: 64px / baseRes.y -> 8. in ML units
+
+        auto mlScale = heightProp / 8.;
+        auto recsShown = Math::Min(8.0, nbRecordsShown);
+        showingMaxRecords = NbPlayers >= 8;
+        if (UploadedToNadeo == 0) {
+            recsShown = 4.0;
+        }
+        recordsGuessedHeight = (6. * (recsShown + 2)) * mlScale;
+
         return bounds;
     }
 
@@ -656,6 +688,7 @@ class MapInfo_UI : MapInfo_Data {
         float fs = fontProp * screen.y * mainFrameAbsScale;
         xPad = xPaddingProp * screen.y; // * mainFrameAbsScale
         float gap = gapProp * screen.y * mainFrameAbsScale;
+        float guessedHeightPx = recordsGuessedHeight * screen.y * mainFrameAbsScale;
 
         // check max size assuming refresh-leadersboards exists
         float recordsWidth = fullWidthProp * screen.y * mainFrameAbsScale;
@@ -711,6 +744,15 @@ class MapInfo_UI : MapInfo_Data {
         nvg::ResetScissor();
         nvg::ResetTransform();
 
+        extraHeightBelowRecords = 0;
+        if (S_DrawTMXBelowRecords && UploadedToTMX == 1) {
+            float hScale = 0.8;
+            auto auxInfoRect = vec4(rect.x + rect.z - recordsWidth, rect.y + guessedHeightPx + gap * 2 + rect.w, recordsWidth, rect.w * hScale);
+            extraHeightBelowRecords = nbRecordsShown == 8 ? (auxInfoRect.w + gap) : 0;
+            nvg::FontSize(fs * hScale);
+            Draw_BelowRecords(auxInfoRect);
+        }
+
         vec2 hoverScale(widthSquish, 1);
         bool rawHover = IsWithin(g_MouseCoords, rect.xyz.xy * hoverScale, vec2(rect.z * widthSquish, rect.w) + vec2(gap, 0))
             || IsWithin(g_MouseCoords, rect.xyz.xy * hoverScale + vec2(rect.z * widthSquish + gap, 0), lastMapInfoSize);
@@ -720,6 +762,20 @@ class MapInfo_UI : MapInfo_Data {
         } else {
             lastMapInfoSize = vec2();
         }
+
+
+    }
+
+    void Draw_BelowRecords(vec4 auxInfoRect) {
+        nvg::Scissor(auxInfoRect.x, auxInfoRect.y, auxInfoRect.z, auxInfoRect.w);
+        nvg::Translate(vec2((1.0 - mainAnim.Progress) * auxInfoRect.z, 0));
+        nvg::BeginPath();
+        DrawBgRect(auxInfoRect.xy, auxInfoRect.zw);
+        nvg::ClosePath();
+        nvg::FillColor(vec4(1.0, 1, 1, 1));
+        nvg::Text(auxInfoRect.xy + auxInfoRect.zw * vec2(.5, .55), "TMX: " + TrackIDStr);
+        nvg::ResetScissor();
+        nvg::ResetTransform();
     }
 
     void Draw_LoadingScreen() {
@@ -824,7 +880,7 @@ class MapInfo_UI : MapInfo_Data {
         vec2 tl = rect.xyz.xy + vec2(rect.z + gap, 0);
         float rowsHeight = yStep * nbRows + xPad * 0.5;
         float fullWidth = HI_MaxCol1 + HI_MaxCol2 + xPad * 4.0;
-        float thumbnailFrameHeight = Math::Min(fullRecordsHeight * screen.y - rowsHeight, fullWidth);
+        float thumbnailFrameHeight = Math::Min(fullRecordsHeight * screen.y + extraHeightBelowRecords - rowsHeight, fullWidth);
         float thumbnailHeight = thumbnailFrameHeight - xPad * 2.0;
         if (ThumbnailTexture is null) thumbnailFrameHeight = 0.0;
         vec2 fullSize = vec2(fullWidth, rowsHeight + thumbnailFrameHeight);
@@ -967,7 +1023,7 @@ class MapInfo_UI : MapInfo_Data {
         return vec4(pos.x, pos.y, labelTB.x, c2Size.x);
     }
 
-        void Draw_PersistentUI() {
+    void Draw_PersistentUI() {
         if (!S_ShowPersistentUI) return;
 
         UI::SetNextWindowSize(800, 500, UI::Cond::FirstUseEver);
