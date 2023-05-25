@@ -490,6 +490,7 @@ class MapInfo_Data {
     private CGameManialinkControl@ slideFrame = null;
     private CGameManialinkFrame@ Race_Record_Frame = null;
     private CGameManialinkFrame@ rankingsFrame = null;
+    private CGameManialinkFrame@ hidePbFrame = null;
     vec2 mainFrameAbsPos;
     float mainFrameAbsScale;
     uint nbRecordsShown = 0;
@@ -515,6 +516,7 @@ class MapInfo_Data {
             @slideFrame = frame.Controls[1];
             if (slideFrame.ControlId != "frame-slide") throw("should be slide-frame");
             @rankingsFrame = cast<CGameManialinkFrame>(Race_Record_Frame.GetFirstChild("frame-ranking"));
+            @hidePbFrame = cast<CGameManialinkFrame>(Race_Record_Frame.GetFirstChild("frame-toggle-pb"));
         }
         if (Race_Record_Frame !is null && !Race_Record_Frame.Visible) return false;
         if (slideFrame.Parent !is null && !slideFrame.Parent.Visible) return false;
@@ -524,6 +526,9 @@ class MapInfo_Data {
             for (uint i = 0; i < rankingsFrame.Controls.Length; i++) {
                 auto item = rankingsFrame.Controls[i];
                 if (item.Visible) nbRecordsShown++;
+            }
+            if (hidePbFrame !is null && hidePbFrame.Visible) {
+                nbRecordsShown++;
             }
         }
 
