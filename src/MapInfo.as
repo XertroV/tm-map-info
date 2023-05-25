@@ -627,7 +627,6 @@ class MapInfo_UI : MapInfo_Data {
     float widthSquish;
     float recordsGuessedHeight;
     float extraHeightBelowRecords = 0;
-    bool showingMaxRecords = false;
 
     vec4 UpdateBounds() {
         screen = vec2(Draw::GetWidth(), Draw::GetHeight());
@@ -654,8 +653,7 @@ class MapInfo_UI : MapInfo_Data {
         // note: 64px / baseRes.y -> 8. in ML units
 
         auto mlScale = heightProp / 8.;
-        auto recsShown = Math::Min(8.0, nbRecordsShown);
-        showingMaxRecords = NbPlayers >= 8;
+        float recsShown = nbRecordsShown;
         if (UploadedToNadeo == 0) {
             recsShown = 4.0;
         }
@@ -754,9 +752,9 @@ class MapInfo_UI : MapInfo_Data {
 
         extraHeightBelowRecords = 0;
         if (S_DrawTMXBelowRecords && UploadedToTMX == 1) {
-            float hScale = 0.8;
+            float hScale = 0.75;
             auto auxInfoRect = vec4(rect.x + rect.z - recordsWidth, rect.y + guessedHeightPx + gap * 2 + rect.w, recordsWidth, rect.w * hScale);
-            extraHeightBelowRecords = nbRecordsShown == 8 ? (auxInfoRect.w + gap) : 0;
+            extraHeightBelowRecords = nbRecordsShown >= 8 ? (auxInfoRect.w * (nbRecordsShown - 8) + auxInfoRect.w + gap) : 0;
             nvg::FontSize(fs * hScale);
             Draw_BelowRecords(auxInfoRect);
         }
