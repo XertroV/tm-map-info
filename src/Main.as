@@ -3,7 +3,9 @@ int g_NvgFont = nvg::LoadFont("fonts/Montserrat-SemiBoldItalic.ttf", true, true)
 UI::Font@ g_ImguiFont = null;
 
 void Main() {
-    if (Meta::GetPluginFromID("BetterLoadingScreen") !is null && S_ShowLoadingScreenInfo) {
+    if ((Meta::GetPluginFromID("BetterLoadingScreen") !is null && S_ShowLoadingScreenInfo) ||
+         (Meta::GetPluginFromID("static-loading-screen") !is null && S_ShowLoadingScreenInfo)
+    ) {
         // we only need to use imgui fonts if BLS is installed, as it renders atop the nvg layer. if
         // BLS isn't installed, we can use more-performant nvg rendering
         LoadImGUIFont();

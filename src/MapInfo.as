@@ -802,7 +802,8 @@ class MapInfo_UI : MapInfo_Data {
         lines.InsertLast("TMX: " + TrackIDStr);
 
         auto bls = Meta::GetPluginFromID("BetterLoadingScreen");
-        bool drawOverBLS = bls !is null && bls.Enabled;
+        auto sls = Meta::GetPluginFromID("static-loading-screen");
+        bool drawOverBLS = (bls !is null && bls.Enabled) || (sls !is null && sls.Enabled);
 
         vec2 screen = vec2(Draw::GetWidth(), Math::Max(1, Draw::GetHeight()));
         float fs = drawOverBLS ? 40.0 : (fontProp * screen.y);
