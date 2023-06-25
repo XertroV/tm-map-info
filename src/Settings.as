@@ -20,6 +20,12 @@ bool S_ShowAuthorFlags = true;
 [Setting category="General" name="Show TMX Track ID below records if it exists"]
 bool S_DrawTMXBelowRecords = true;
 
+[Setting category="General" name="Lakanta Mode" description="Middle-clicking the TMX Track ID below the records panel will load the next map (by TMX TrackID)."]
+bool S_LakantaMode = false;
+
+[Setting category="General" name="Next TMX Map Hotkey" description="When Lakanta mode is active, this hotkey will take you to the next map. Default: `]` (Oem6)"]
+VirtualKey S_LakantaModeHotKey = VirtualKey::Oem6;
+
 [Setting category="General" name="Show Debug Window (must be in a map)"]
 bool S_ShowDebugUI = false;
 
@@ -27,9 +33,9 @@ bool S_ShowDebugUI = false;
 bool S_ShowDebugMenuItem = false;
 
 
-
 [Setting category="General" name="Log Level"]
 LogLevel S_LogLevel = LogLevel::Info;
+
 
 #if DEPENDENCY_MANIAEXCHANGE
 [Setting category="Integrations" name="Open TMX Links in the ManiaExchange plugin?"]

@@ -45,7 +45,7 @@ Json::Value@ nadeoData;
 void getNadeoMapData(const string &in uid) {
     NadeoServices::AddAudience("NadeoLiveServices");
     while (!NadeoServices::IsAuthenticated("NadeoLiveServices")) yield();
-    Net::HttpRequest@ req = NadeoServices::Get("NadeoLiveServices", NadeoServices::BaseURL()+"/api/token/map/"+uid);
+    Net::HttpRequest@ req = NadeoServices::Get("NadeoLiveServices", NadeoServices::BaseURLLive()+"/api/token/map/"+uid);
     req.Start();
     while (!req.Finished()) yield();
     Json::Value resp = Json::Parse(req.String());
@@ -151,8 +151,14 @@ class MapInfo_Data {
             || (TmDojoButton !is null && TmDojoButton.OnMouseClick(down, button))
             || (TMioAuthorButton !is null && TMioAuthorButton.OnMouseClick(down, button))
             || (TMXAuthorButton !is null && TMXAuthorButton.OnMouseClick(down, button))
+            || (S_LakantaMode && S_DrawTMXBelowRecords && CheckClickNextTMX(down, button))
             // || (Button2 !is null && Button.OnMouseClick(down, button))
             ;
+    }
+
+    // will be overridden
+    bool CheckClickNextTMX(bool down, int button) {
+        return false;
     }
 
     void SetName(const string &in name) {
@@ -627,6 +633,7 @@ class MapInfo_UI : MapInfo_Data {
     float widthSquish;
     float recordsGuessedHeight;
     float extraHeightBelowRecords = 0;
+    vec4 auxInfoRect;
 
     vec4 UpdateBounds() {
         screen = vec2(Draw::GetWidth(), Draw::GetHeight());
@@ -753,23 +760,39 @@ class MapInfo_UI : MapInfo_Data {
         extraHeightBelowRecords = 0;
         if (S_DrawTMXBelowRecords && UploadedToTMX == 1) {
             float hScale = 0.75;
-            auto auxInfoRect = vec4(rect.x + rect.z - recordsWidth, rect.y + guessedHeightPx + gap * 2 + rect.w, recordsWidth, rect.w * hScale);
+            auxInfoRect = vec4(rect.x + rect.z - recordsWidth, rect.y + guessedHeightPx + gap * 2 + rect.w, recordsWidth, rect.w * hScale);
             extraHeightBelowRecords = nbRecordsShown >= 8 ? (auxInfoRect.w * (nbRecordsShown - 8) + auxInfoRect.w + gap) : 0;
             nvg::FontSize(fs * hScale);
             Draw_BelowRecords(auxInfoRect);
         }
 
         vec2 hoverScale(widthSquish, 1);
-        bool rawHover = IsWithin(g_MouseCoords, rect.xyz.xy * hoverScale, vec2(rect.z * widthSquish, rect.w) + vec2(gap, 0))
-            || IsWithin(g_MouseCoords, rect.xyz.xy * hoverScale + vec2(rect.z * widthSquish + gap, 0), lastMapInfoSize);
+        bool rawHover = IsWithin(g_MouseCoords, rect.xy * hoverScale, vec2(rect.z * widthSquish, rect.w) + vec2(gap, 0))
+            || IsWithin(g_MouseCoords, rect.xy * hoverScale + vec2(rect.z * widthSquish + gap, 0), lastMapInfoSize);
             ;
         if (hoverAnim.Update(!closed && rawHover, slideFrameProgress)) {
             DrawHoveredInterface(rect, fs, textHOffset, gap);
         } else {
             lastMapInfoSize = vec2();
         }
+    }
 
+    bool CheckClickNextTMX(bool down, int button) override {
+        // check for middle mouse button
+        if (!down || button != 2) return false;
+        bool clicked = IsWithin(g_MouseCoords, auxInfoRect.xy, auxInfoRect.zw);
+        if (clicked) {
+            startnew(CoroutineFunc(OnClickNextTMX));
+        }
+        return clicked;
+    }
 
+    void OnClickNextTMX() {
+        ReturnToMenu(false);
+        auto nextID = MapMonitor::GetNextMapByTMXTrackID(TrackID);
+        NotifyGreen("Loading next TMX map: " + nextID);
+        // IO::SetClipboard(tostring(nextID));
+        LoadMapNow("https://trackmania.exchange/maps/download/" + nextID);
     }
 
     void Draw_BelowRecords(vec4 auxInfoRect) {

@@ -22,7 +22,7 @@ Json::Value@ FetchClubEndpoint(const string &in route) {
 
 Json::Value@ CallLiveApiPath(const string &in path) {
     AssertGoodPath(path);
-    return FetchLiveEndpoint(NadeoServices::BaseURL() + path);
+    return FetchLiveEndpoint(NadeoServices::BaseURLLive() + path);
 }
 
 Json::Value@ CallCompApiPath(const string &in path) {

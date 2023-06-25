@@ -128,8 +128,16 @@ void OnMouseMove(int x, int y) {
 UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
     OnMouseMove(x, y);
     if (g_MapInfo !is null) {
-        if (g_MapInfo.OnMouseButton(down, button))
+        if (g_MapInfo.OnMouseButton(down, button)) {
             return UI::InputBlocking::Block;
+        }
+    }
+    return UI::InputBlocking::DoNothing;
+}
+
+UI::InputBlocking OnKeyPress(bool down, VirtualKey key) {
+    if (g_MapInfo !is null && S_LakantaMode && down && key == S_LakantaModeHotKey) {
+        startnew(CoroutineFunc(g_MapInfo.OnClickNextTMX));
     }
     return UI::InputBlocking::DoNothing;
 }
@@ -141,4 +149,15 @@ void DrawTexture(vec2 pos, vec2 size, nvg::Texture@ tex, float alpha = 1.0) {
     nvg::Rect(pos, size);
     nvg::Fill();
     nvg::ClosePath();
+}
+
+
+void NotifyError(const string &in msg) {
+    log_warn(msg);
+    UI::ShowNotification(Meta::ExecutingPlugin().Name + ": Error", msg, vec4(.9, .3, .1, .3), 15000);
+}
+
+void NotifyGreen(const string &in msg) {
+    log_info(msg);
+    UI::ShowNotification(Meta::ExecutingPlugin().Name, msg, vec4(.5, .9, .3, .3), 5000);
 }

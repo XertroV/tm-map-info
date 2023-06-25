@@ -19,4 +19,8 @@ namespace MapMonitor {
     Json::Value@ GetNbPlayersForMap(const string &in mapUid) {
         return CallMapMonitorApiPath('/map/' + mapUid + '/nb_players/refresh');
     }
+
+    int GetNextMapByTMXTrackID(int TrackID) {
+        return CallMapMonitorApiPath('/tmx/' + TrackID + '/next')["next"];
+    }
 }
