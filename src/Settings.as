@@ -20,7 +20,7 @@ bool S_ShowAuthorFlags = true;
 [Setting category="General" name="Show TMX Track ID below records if it exists"]
 bool S_DrawTMXBelowRecords = true;
 
-[Setting category="General" name="Lakanta Mode" description="Middle-clicking the TMX Track ID below the records panel will load the next map (by TMX TrackID)."]
+[Setting category="General" name="Lakanta Mode" description="Middle-clicking the TMX Track ID below the records panel will load the next map (by TMX TrackID). Additionally, the TMX ID of that track will be copied to the clipboard."]
 bool S_LakantaMode = false;
 
 [Setting category="General" name="Next TMX Map Hotkey" description="When Lakanta mode is active, this hotkey will take you to the next map. Default: `]` (Oem6)"]

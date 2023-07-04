@@ -788,10 +788,16 @@ class MapInfo_UI : MapInfo_Data {
     }
 
     void OnClickNextTMX() {
+        int nextID = -1;
+        try {
+            nextID = MapMonitor::GetNextMapByTMXTrackID(TrackID);
+        } catch {
+            NotifyError("Failed to get next map ID, try again or do manually. Sorry :(.\nException: " + getExceptionInfo());
+            return;
+        }
         ReturnToMenu(false);
-        auto nextID = MapMonitor::GetNextMapByTMXTrackID(TrackID);
-        NotifyGreen("Loading next TMX map: " + nextID);
-        // IO::SetClipboard(tostring(nextID));
+        NotifyGreen("Loading next TMX map: " + nextID + ".\nAlso copying to clipboard.");
+        IO::SetClipboard(tostring(nextID));
         LoadMapNow("https://trackmania.exchange/maps/download/" + nextID);
     }
 
