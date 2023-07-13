@@ -788,20 +788,32 @@ class MapInfo_UI : MapInfo_Data {
     }
 
     void OnClickNextTMX() {
-        int nextID = -1;
+        int nextID = TrackID;
+        int count = 0;
         try {
-            nextID = MapMonitor::GetNextMapByTMXTrackID(TrackID);
+            while (nextID == TrackID) {
+                nextID = MapMonitor::GetNextMapByTMXTrackID(TrackID);
+                count++;
+                trace('Got next id: ' + nextID + ' for trackID ' + TrackID);
+                if (nextID == TrackID) {
+                    if (count > 5) {
+                        throw('Failed 5 times to get next map but got the same ID each time');
+                    }
+                    NotifyError("Got the same ID (" + nextID + ") for next map as the current ID (" + TrackID + ") -- Retrying in 1s...");
+                    sleep(1000);
+                }
+            }
         } catch {
             NotifyError("Failed to get next map ID, try again or do manually. Sorry :(.\nException: " + getExceptionInfo());
             return;
         }
-        ReturnToMenu(false);
         NotifyGreen("Loading next TMX map: " + nextID + ".\nAlso copying to clipboard.");
         IO::SetClipboard(tostring(nextID));
-        LoadMapNow("https://trackmania.exchange/maps/download/" + nextID);
+        LoadMapNow("https://map-monitor.xk.io/maps/download/" + nextID);
     }
 
     void Draw_BelowRecords(vec4 auxInfoRect) {
+        nvg::Scale(widthSquish, 1);
         nvg::Scissor(auxInfoRect.x, auxInfoRect.y, auxInfoRect.z, auxInfoRect.w);
         nvg::Translate(vec2((1.0 - mainAnim.Progress) * auxInfoRect.z, 0));
         nvg::BeginPath();
