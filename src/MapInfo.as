@@ -788,6 +788,7 @@ class MapInfo_UI : MapInfo_Data {
     }
 
     void OnClickNextTMX() {
+        if (AbortClickNextTMX()) return;
         int nextID = TrackID;
         int count = 0;
         try {
@@ -810,6 +811,31 @@ class MapInfo_UI : MapInfo_Data {
         NotifyGreen("Loading next TMX map: " + nextID + ".\nAlso copying to clipboard.");
         IO::SetClipboard(tostring(nextID));
         LoadMapNow("https://map-monitor.xk.io/maps/download/" + nextID);
+    }
+
+    bool AbortClickNextTMX() {
+        string refuse = "Refusing to go to next map as ";
+        auto app = GetApp();
+        if (app.CurrentPlayground is null) {
+            NotifyError(refuse + "you don't appear to be in a map.");
+            return true;
+        }
+        if (app.PlaygroundScript is null) {
+            NotifyError(refuse + "you are not in solo mode (so it looks like you're on a server).");
+            return true;
+        }
+        auto cp = app.CurrentPlayground;
+        if (cp.Players.Length != 1) {
+            NotifyError(refuse + "could not check player race time.");
+            return true;
+        }
+        auto player = cast<CSmPlayer>(cp.Players[0]);
+        auto script = cast<CSmScriptPlayer>(player.ScriptAPI);
+        if (script.CurrentRaceTime > 60 * 1000) {
+            NotifyError(refuse + "current race time is > 1 minute; respawn to go to next map.");
+            return true;
+        }
+        return false;
     }
 
     void Draw_BelowRecords(vec4 auxInfoRect) {
