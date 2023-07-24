@@ -787,7 +787,10 @@ class MapInfo_UI : MapInfo_Data {
         return clicked;
     }
 
+    bool hasNextMapBeenTriggered = false;
     void OnClickNextTMX() {
+        // don't allow this method to trigger more than once
+        if (hasNextMapBeenTriggered) return;
         if (AbortClickNextTMX()) return;
         int nextID = TrackID;
         int count = 0;
@@ -808,6 +811,8 @@ class MapInfo_UI : MapInfo_Data {
             NotifyError("Failed to get next map ID, try again or do manually. Sorry :(.\nException: " + getExceptionInfo());
             return;
         }
+        if (hasNextMapBeenTriggered) return;
+        hasNextMapBeenTriggered = true;
         NotifyGreen("Loading next TMX map: " + nextID + ".\nAlso copying to clipboard.");
         IO::SetClipboard(tostring(nextID));
         LoadMapNow("https://map-monitor.xk.io/maps/download/" + nextID);
