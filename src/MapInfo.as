@@ -752,9 +752,9 @@ class MapInfo_UI : MapInfo_Data {
 
         hScale = 0.6;
         nvg::FontSize(fs * hScale);
-        float medalsHeight = 2. * rect.w * hScale;
+        float medalsHeight = (S_DrawOnly2MedalsBelowRecords ? 1. : 2.) * rect.w * hScale;
         medalsInfoRect = vec4(auxInfoRect.x, auxInfoRect.y, recordsWidth, medalsHeight);
-        if (S_DrawMedalsBelowRecords) {
+        if (S_DrawMedalsBelowRecords || S_DrawOnly2MedalsBelowRecords) {
             if (drawTmxId) {
                 medalsInfoRect.y += gap + auxInfoRect.w;
                 extraHeightBelowRecords += gap;
@@ -862,14 +862,17 @@ class MapInfo_UI : MapInfo_Data {
         nvg::BeginPath();
         DrawBgRect(medalsInfoRect.xy, medalsInfoRect.zw);
         nvg::ClosePath();
+        float yPropFirstRow = S_DrawOnly2MedalsBelowRecords ? (.5 + .025) : (.28 + .025);
         nvg::FillColor(OrderedMedalColors[0]);
-        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.29, .28 + .025), OrderedMedalTimes[0]);
+        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.29, yPropFirstRow), OrderedMedalTimes[0]);
         nvg::FillColor(OrderedMedalColors[1]);
-        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.71, .28 + .025), OrderedMedalTimes[1]);
-        nvg::FillColor(OrderedMedalColors[2]);
-        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.29, .72 + .025), OrderedMedalTimes[2]);
-        nvg::FillColor(OrderedMedalColors[3]);
-        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.71, .72 + .025), OrderedMedalTimes[3]);
+        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.71, yPropFirstRow), OrderedMedalTimes[1]);
+        if (!S_DrawOnly2MedalsBelowRecords) {
+            nvg::FillColor(OrderedMedalColors[2]);
+            nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.29, .72 + .025), OrderedMedalTimes[2]);
+            nvg::FillColor(OrderedMedalColors[3]);
+            nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.71, .72 + .025), OrderedMedalTimes[3]);
+        }
         nvg::ResetScissor();
         nvg::ResetTransform();
     }
