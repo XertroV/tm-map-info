@@ -8,4 +8,7 @@ siteid = 320
 [script]
 dependencies = ["NadeoServices"]
 optional_dependencies = ["ManiaExchange"]
+exports = ["ExportFunc.as"]
+shared_exports = ["ExportShared.as"]
 #__DEFINES__
+module = "MapInfo"

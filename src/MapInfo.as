@@ -60,62 +60,20 @@ const uint LoadingNbPlayersFlag = 987654321;
 /**
  * Class to manage getting map data from API sources. Intended as a base class for MapInfo_UI which handles drawing the info to the screen.
  */
-class MapInfo_Data {
-    string uid;
-    string author;
-    string Name;
-    string RawName;
-    string CleanName;
+class MapInfo_Data : MapInfo::Data {
+    // Note: most properties defined in MapInfo::Data, which is a shared class, so that it can be exported.
+
     NvgText@ NvgName;
 
     protected bool SHUTDOWN = false;
 
-    string AuthorAccountId = "";
-    string AuthorDisplayName = "";
-    string AuthorWebServicesUserId = "";
-    string AuthorCountryFlag = "";
-    string FileName = "";
-    string FileUrl = "";
-    string ThumbnailUrl = "";
-    uint TimeStamp = 0;
-    uint AuthorScore = 0;
-    uint GoldScore = 0;
-    uint SilverScore = 0;
-    uint BronzeScore = 0;
-    string DateStr = "";
+    NvgButton@ TmDojoButton = null;
 
-    // -1 for loading, 0 for no, 1 for yes
-    int UploadedToNadeo = -1;
     NvgButton@ TMioButton = null;
     NvgButton@ TMioAuthorButton = null;
 
-    int UploadedToTMX = -1;
-    int TMXAuthorID = -1;
-    int TrackID = -1;
-    string TrackIDStr = "...";
-    // When `null`, there's no TMX info. It should never be Json::Type::Null.
-    Json::Value@ TMX_Info = null;
     NvgButton@ TMXButton = null;
     NvgButton@ TMXAuthorButton = null;
-
-    uint NbPlayers = LoadingNbPlayersFlag;
-    uint WorstTime = 0;
-    string NbPlayersStr = "...";
-    string WorstTimeStr = "...";
-    string AuthorTimeStr = "...";
-
-    string TOTDDate = "";
-    int TOTDDaysAgo = -1;
-    string TOTDStr = "...";
-
-    uint LoadingStartedAt = Time::Now;
-    bool LoadedMapData = false;
-    bool LoadedNbPlayers = false;
-    bool LoadedWasTOTD = false;
-
-    int UploadedToTmDojo = -1;
-    Json::Value@ TmDojoData = null;
-    NvgButton@ TmDojoButton = null;
 
     MapInfo_Data() {
         auto map = GetApp().RootMap;
@@ -836,8 +794,10 @@ class MapInfo_UI : MapInfo_Data {
         }
         auto player = cast<CSmPlayer>(cp.Players[0]);
         auto script = cast<CSmScriptPlayer>(player.ScriptAPI);
-        if (script.CurrentRaceTime > 60 * 1000) {
-            NotifyError(refuse + "current race time is > 1 minute; respawn to go to next map.");
+        auto cmap = app.Network.ClientManiaAppPlayground;
+        bool isPlaying = cmap.UI.UISequence == CGamePlaygroundUIConfig::EUISequence::Playing;
+        if (isPlaying && script.CurrentRaceTime > 120 * 1000) {
+            NotifyError(refuse + "current race time is > 2 minutes; respawn to go to next map.");
             return true;
         }
         return false;
