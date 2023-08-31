@@ -622,9 +622,6 @@ class MapInfo_UI : MapInfo_Data {
         if (UploadedToNadeo == 0) {
             recsShown = 4.0;
         }
-        if (nbRecordsShown == 0 && recsShown == 0.0) {
-            recsShown = 1.0;
-        }
         recordsGuessedHeight = (6. * (recsShown + 2)) * mlScale;
 
         return bounds;
