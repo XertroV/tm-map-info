@@ -35,6 +35,10 @@ Json::Value@ CallClubApiPath(const string &in path) {
     return FetchClubEndpoint(NadeoServices::BaseURLClub() + path);
 }
 
+auto PluginVersion = Meta::ExecutingPlugin().Version;
+auto PluginID = Meta::ExecutingPlugin().ID;
+auto PluginAuthor = Meta::ExecutingPlugin().Author;
+
 Json::Value@ CallMapMonitorApiPath(const string &in path) {
     AssertGoodPath(path);
     // auto token = MM_Auth::GetCachedToken();
@@ -42,7 +46,7 @@ Json::Value@ CallMapMonitorApiPath(const string &in path) {
     log_trace("[CallMapMonitorApiPath] Requesting: " + url);
     auto req = Net::HttpRequest();
     req.Url = MM_API_ROOT + path;
-    req.Headers['User-Agent'] = 'MapInfo/Openplanet-Plugin/contact=@XertroV';
+    req.Headers['User-Agent'] = PluginID+'/'+PluginVersion+'/Openplanet-Plugin/contact=@'+PluginAuthor;
     // req.Headers['Authorization'] = 'openplanet ' + token;
     req.Method = Net::HttpMethod::Get;
     req.Start();
