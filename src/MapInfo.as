@@ -158,10 +158,32 @@ class MapInfo_Data : MapInfo::Data {
         SilverScore = info.SilverScore;
         BronzeScore = info.BronzeScore;
         AuthorTimeStr = Time::Format(AuthorScore);
+        GoldTimeStr = Time::Format(GoldScore);
+        SilverTimeStr = Time::Format(SilverScore);
+        BronzeTimeStr = Time::Format(BronzeScore);
+        OrderedMedalTimes = {AuthorTimeStr, GoldTimeStr, SilverTimeStr, BronzeTimeStr};
 
         LoadedMapData = true;
         log_trace('MapInfo_Data loaded map data');
         startnew(CoroutineFunc(this.LoadThumbnail));
+        startnew(CoroutineFunc(this.CheckChampionMedal));
+    }
+
+    void CheckChampionMedal() {
+#if DEPENDENCY_CHAMPIONMEDALS
+        if (!Meta::GetPluginFromID("ChampionMedals").Enabled) return;
+        auto startChampCheck = Time::Now;
+        while (ChampionScore == 0 && Time::Now - startChampCheck < 30000 && !SHUTDOWN) {
+            ChampionScore = ChampionMedals::GetCMTime();
+            if (ChampionScore > 0) {
+                ChampionTimeStr = Time::Format(ChampionScore);
+                OrderedMedalTimes.InsertAt(0, ChampionTimeStr);
+                OrderedMedalColors.InsertAt(0, vec4(0.847f, 0.165f, 0.337f, 1.000f));
+                break;
+            }
+            sleep(250);
+        }
+#endif
     }
 
     MapThumbnailTexture@ Textures = null;
@@ -312,6 +334,7 @@ class MapInfo_Data : MapInfo::Data {
         return uiSeq == CGamePlaygroundUIConfig::EUISequence::Playing
             || uiSeq == CGamePlaygroundUIConfig::EUISequence::Finish
             || uiSeq == CGamePlaygroundUIConfig::EUISequence::EndRound
+            || uiSeq == CGamePlaygroundUIConfig::EUISequence::UIInteraction
             ;
     }
 
@@ -369,8 +392,9 @@ class MapInfo_Data : MapInfo::Data {
         if (GetApp().PlaygroundScript is null) return false;
         auto cmap = GetApp().Network.ClientManiaAppPlayground;
         if (cmap is null || cmap.UILayers.Length < 2) return false;
-        if (!IsUISequencePlayingOrFinish(cmap.UI.UISequence)) return true;
+        if (!IsGoodUISequence(cmap.UI.UISequence)) return true;
         // do we ever show mapinfo outside of Playing/Finish?
+        if (backToRaceFromGhostVisible) return false;
         if (IsUISequencePlayingOrFinish(cmap.UI.UISequence)) return false;
         if (soloEndMenuFrame !is null && soloStartMenuFrame !is null) {
             return soloStartMenuFrame.Visible || soloEndMenuFrame.Visible;
@@ -455,6 +479,7 @@ class MapInfo_Data : MapInfo::Data {
     private CGameManialinkFrame@ Race_Record_Frame = null;
     private CGameManialinkFrame@ rankingsFrame = null;
     private CGameManialinkFrame@ hidePbFrame = null;
+    bool backToRaceFromGhostVisible = false;
     vec2 mainFrameAbsPos;
     float mainFrameAbsScale;
     uint nbRecordsShown = 0;
@@ -481,6 +506,7 @@ class MapInfo_Data : MapInfo::Data {
             if (slideFrame.ControlId != "frame-slide") throw("should be slide-frame");
             @rankingsFrame = cast<CGameManialinkFrame>(Race_Record_Frame.GetFirstChild("frame-ranking"));
             @hidePbFrame = cast<CGameManialinkFrame>(Race_Record_Frame.GetFirstChild("frame-toggle-pb"));
+            backToRaceFromGhostVisible = Race_Record_Frame.GetFirstChild("button-back-to-race").Visible;
         }
         if (Race_Record_Frame !is null && !Race_Record_Frame.Visible) return false;
         if (slideFrame.Parent !is null && !slideFrame.Parent.Visible) return false;
@@ -592,6 +618,7 @@ class MapInfo_UI : MapInfo_Data {
     float recordsGuessedHeight;
     float extraHeightBelowRecords = 0;
     vec4 auxInfoRect;
+    vec4 medalsInfoRect;
 
     vec4 UpdateBounds() {
         screen = vec2(Draw::GetWidth(), Draw::GetHeight());
@@ -713,12 +740,26 @@ class MapInfo_UI : MapInfo_Data {
         nvg::ResetTransform();
 
         extraHeightBelowRecords = 0;
-        if (S_DrawTMXBelowRecords && UploadedToTMX == 1) {
-            float hScale = 0.75;
-            auxInfoRect = vec4(rect.x + rect.z - recordsWidth, rect.y + guessedHeightPx + gap * 2 + rect.w, recordsWidth, rect.w * hScale);
-            extraHeightBelowRecords = nbRecordsShown >= 8 ? (auxInfoRect.w * (nbRecordsShown - 8) + auxInfoRect.w + gap) : 0;
-            nvg::FontSize(fs * hScale);
-            Draw_BelowRecords(auxInfoRect);
+        float hScale = 0.75;
+        auxInfoRect = vec4(rect.x + rect.z - recordsWidth, rect.y + guessedHeightPx + gap * 2 + rect.w, recordsWidth, rect.w * hScale);
+        bool drawTmxId = S_DrawTMXBelowRecords && UploadedToTMX == 1;
+        nvg::FontSize(fs * hScale);
+        if (drawTmxId) {
+            extraHeightBelowRecords += nbRecordsShown >= 8 ? (auxInfoRect.w * (nbRecordsShown - 8) + auxInfoRect.w + gap) : 0;
+            Draw_TMXBelowRecords(auxInfoRect);
+        }
+
+        hScale = 0.6;
+        nvg::FontSize(fs * hScale);
+        float medalsHeight = 2. * rect.w * hScale;
+        medalsInfoRect = vec4(auxInfoRect.x, auxInfoRect.y, recordsWidth, medalsHeight);
+        if (S_DrawMedalsBelowRecords) {
+            if (drawTmxId) {
+                medalsInfoRect.y += gap + auxInfoRect.w;
+                extraHeightBelowRecords += gap;
+            }
+            extraHeightBelowRecords += medalsHeight;
+            Draw_MedalsBelowRecords();
         }
 
         vec2 hoverScale(widthSquish, 1);
@@ -800,7 +841,7 @@ class MapInfo_UI : MapInfo_Data {
         return false;
     }
 
-    void Draw_BelowRecords(vec4 auxInfoRect) {
+    void Draw_TMXBelowRecords(vec4 auxInfoRect) {
         nvg::Scale(widthSquish, 1);
         nvg::Scissor(auxInfoRect.x, auxInfoRect.y, auxInfoRect.z, auxInfoRect.w);
         nvg::Translate(vec2((1.0 - mainAnim.Progress) * auxInfoRect.z, 0));
@@ -809,6 +850,25 @@ class MapInfo_UI : MapInfo_Data {
         nvg::ClosePath();
         nvg::FillColor(vec4(1.0, 1, 1, 1));
         nvg::Text(auxInfoRect.xy + auxInfoRect.zw * vec2(.5, .55), "TMX: " + TrackIDStr);
+        nvg::ResetScissor();
+        nvg::ResetTransform();
+    }
+
+    void Draw_MedalsBelowRecords() {
+        nvg::Scale(widthSquish, 1);
+        nvg::Scissor(medalsInfoRect.x, medalsInfoRect.y, medalsInfoRect.z, medalsInfoRect.w);
+        nvg::Translate(vec2((1.0 - mainAnim.Progress) * medalsInfoRect.z, 0));
+        nvg::BeginPath();
+        DrawBgRect(medalsInfoRect.xy, medalsInfoRect.zw);
+        nvg::ClosePath();
+        nvg::FillColor(OrderedMedalColors[0]);
+        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.25, .28 + .025), OrderedMedalTimes[0]);
+        nvg::FillColor(OrderedMedalColors[1]);
+        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.75, .28 + .025), OrderedMedalTimes[1]);
+        nvg::FillColor(OrderedMedalColors[2]);
+        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.25, .72 + .025), OrderedMedalTimes[2]);
+        nvg::FillColor(OrderedMedalColors[3]);
+        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.75, .72 + .025), OrderedMedalTimes[3]);
         nvg::ResetScissor();
         nvg::ResetTransform();
     }
@@ -1133,12 +1193,13 @@ class MapInfo_UI : MapInfo_Data {
                 DebugTableRowStr("FileName", FileName);
                 DebugTableRowStr("FileUrl", FileUrl);
                 DebugTableRowStr("ThumbnailUrl", ThumbnailUrl);
+                DebugTableRowStr("DateStr", DateStr);
                 DebugTableRowUint("TimeStamp", TimeStamp);
                 DebugTableRowUint("AuthorScore", AuthorScore);
                 DebugTableRowUint("GoldScore", GoldScore);
                 DebugTableRowUint("SilverScore", SilverScore);
                 DebugTableRowUint("BronzeScore", BronzeScore);
-                DebugTableRowStr("DateStr", DateStr);
+                DebugTableRowUint("ChampionScore", ChampionScore);
 
                 DebugTableRowInt("UploadedToNadeo", UploadedToNadeo);
                 DebugTableRowButton("TMioButton", TMioButton);

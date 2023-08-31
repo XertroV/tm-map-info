@@ -20,6 +20,20 @@ namespace MapInfo {
         uint GoldScore = 0;
         uint SilverScore = 0;
         uint BronzeScore = 0;
+        uint ChampionScore = 0;
+        string ChampionTimeStr = "...";
+        string AuthorTimeStr = "...";
+        string GoldTimeStr = "...";
+        string SilverTimeStr = "...";
+        string BronzeTimeStr = "...";
+        // if a Champion Medal exists (and that plugin is installed) it'll be inserted at index=0
+        string[] OrderedMedalTimes = {"...", "...", "...", "..."};
+        vec4[] OrderedMedalColors = {
+            vec4(0.000f, 0.471f, 0.035f, 1.0), // Author
+            vec4(0.871f, 0.737f, 0.259f, 1.0), // Gold
+            vec4(0.537f, 0.604f, 0.604f, 1.0), // Silver
+            vec4(0.604f, 0.400f, 0.259f, 1.0), // Bronze
+        };
         string DateStr = "";
 
         // -1 for loading, 0 for no, 1 for yes
@@ -37,7 +51,6 @@ namespace MapInfo {
         uint WorstTime = 0;
         string NbPlayersStr = "...";
         string WorstTimeStr = "...";
-        string AuthorTimeStr = "...";
 
         string TOTDDate = "";
         int TOTDDaysAgo = -1;

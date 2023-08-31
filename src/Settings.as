@@ -20,6 +20,9 @@ bool S_ShowAuthorFlags = true;
 [Setting category="General" name="Show TMX Track ID below records if it exists"]
 bool S_DrawTMXBelowRecords = true;
 
+[Setting category="General" name="Show medal times below records"]
+bool S_DrawMedalsBelowRecords = true;
+
 [Setting category="General" name="Lakanta Mode" description="Middle-clicking the TMX Track ID below the records panel will load the next map (by TMX TrackID). Additionally, the TMX ID of that track will be copied to the clipboard."]
 bool S_LakantaMode = false;
 
