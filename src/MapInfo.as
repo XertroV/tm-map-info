@@ -863,13 +863,13 @@ class MapInfo_UI : MapInfo_Data {
         DrawBgRect(medalsInfoRect.xy, medalsInfoRect.zw);
         nvg::ClosePath();
         nvg::FillColor(OrderedMedalColors[0]);
-        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.25, .28 + .025), OrderedMedalTimes[0]);
+        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.29, .28 + .025), OrderedMedalTimes[0]);
         nvg::FillColor(OrderedMedalColors[1]);
-        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.75, .28 + .025), OrderedMedalTimes[1]);
+        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.71, .28 + .025), OrderedMedalTimes[1]);
         nvg::FillColor(OrderedMedalColors[2]);
-        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.25, .72 + .025), OrderedMedalTimes[2]);
+        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.29, .72 + .025), OrderedMedalTimes[2]);
         nvg::FillColor(OrderedMedalColors[3]);
-        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.75, .72 + .025), OrderedMedalTimes[3]);
+        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.71, .72 + .025), OrderedMedalTimes[3]);
         nvg::ResetScissor();
         nvg::ResetTransform();
     }
