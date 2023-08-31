@@ -757,9 +757,8 @@ class MapInfo_UI : MapInfo_Data {
         if (S_DrawMedalsBelowRecords || S_DrawOnly2MedalsBelowRecords) {
             if (drawTmxId) {
                 medalsInfoRect.y += gap + auxInfoRect.w;
-                extraHeightBelowRecords += gap;
             }
-            extraHeightBelowRecords += medalsHeight;
+            extraHeightBelowRecords += medalsHeight + gap;
             Draw_MedalsBelowRecords();
         }
 
