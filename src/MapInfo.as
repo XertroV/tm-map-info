@@ -506,7 +506,8 @@ class MapInfo_Data : MapInfo::Data {
             if (slideFrame.ControlId != "frame-slide") throw("should be slide-frame");
             @rankingsFrame = cast<CGameManialinkFrame>(Race_Record_Frame.GetFirstChild("frame-ranking"));
             @hidePbFrame = cast<CGameManialinkFrame>(Race_Record_Frame.GetFirstChild("frame-toggle-pb"));
-            backToRaceFromGhostVisible = Race_Record_Frame.GetFirstChild("button-back-to-race").Visible;
+            auto backBtn = Race_Record_Frame.GetFirstChild("button-back-to-race");
+            backToRaceFromGhostVisible = backBtn !is null && backBtn.Visible;
         }
         if (Race_Record_Frame !is null && !Race_Record_Frame.Visible) return false;
         if (slideFrame.Parent !is null && !slideFrame.Parent.Visible) return false;
