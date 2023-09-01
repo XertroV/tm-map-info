@@ -503,6 +503,7 @@ class MapInfo_Data : MapInfo::Data {
     private CGameManialinkFrame@ Race_Record_Frame = null;
     private CGameManialinkFrame@ rankingsFrame = null;
     private CGameManialinkFrame@ hidePbFrame = null;
+    private CGameManialinkFrame@ frameNoRecords = null;
     bool backToRaceFromGhostVisible = false;
     vec2 mainFrameAbsPos;
     float mainFrameAbsScale;
@@ -530,6 +531,7 @@ class MapInfo_Data : MapInfo::Data {
             if (slideFrame.ControlId != "frame-slide") throw("should be slide-frame");
             @rankingsFrame = cast<CGameManialinkFrame>(Race_Record_Frame.GetFirstChild("frame-ranking"));
             @hidePbFrame = cast<CGameManialinkFrame>(Race_Record_Frame.GetFirstChild("frame-toggle-pb"));
+            @frameNoRecords = cast<CGameManialinkFrame>(Race_Record_Frame.GetFirstChild("frame-no-records"));
             auto backBtn = Race_Record_Frame.GetFirstChild("button-back-to-race");
             backToRaceFromGhostVisible = backBtn !is null && backBtn.Visible;
         }
@@ -543,6 +545,9 @@ class MapInfo_Data : MapInfo::Data {
                 if (item.Visible) nbRecordsShown++;
             }
             if (hidePbFrame !is null && hidePbFrame.Visible) {
+                nbRecordsShown++;
+            }
+            if (frameNoRecords !is null && frameNoRecords.Visible) {
                 nbRecordsShown++;
             }
         }
