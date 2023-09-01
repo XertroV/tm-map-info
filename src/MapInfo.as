@@ -669,10 +669,12 @@ class MapInfo_UI : MapInfo_Data {
         //
         // note: 64px / baseRes.y -> 8. in ML units
 
+        // todo: check all error cases: frame-standard-required, frame-map-not-available, frame-missing-privilege
+
         auto mlScale = heightProp / 8.;
         float recsShown = nbRecordsShown;
         if (UploadedToNadeo == 0) {
-            recsShown = 4.0;
+            recsShown = 3.0;
         }
         recordsGuessedHeight = (6. * (recsShown + 2)) * mlScale;
 
