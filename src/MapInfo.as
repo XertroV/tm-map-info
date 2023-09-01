@@ -133,6 +133,7 @@ class MapInfo_Data : MapInfo::Data {
         if (info is null) {
             UploadedToNadeo = 0;
             DateStr = "Never";
+            GetMapInfoFromMap();
             return;
         }
         UploadedToNadeo = 1;
@@ -157,16 +158,39 @@ class MapInfo_Data : MapInfo::Data {
         GoldScore = info.GoldScore;
         SilverScore = info.SilverScore;
         BronzeScore = info.BronzeScore;
-        AuthorTimeStr = Time::Format(AuthorScore);
-        GoldTimeStr = Time::Format(GoldScore);
-        SilverTimeStr = Time::Format(SilverScore);
-        BronzeTimeStr = Time::Format(BronzeScore);
-        OrderedMedalTimes = {AuthorTimeStr, GoldTimeStr, SilverTimeStr, BronzeTimeStr};
+        SetMedalTimeStrs();
 
         LoadedMapData = true;
         log_trace('MapInfo_Data loaded map data');
         startnew(CoroutineFunc(this.LoadThumbnail));
         startnew(CoroutineFunc(this.CheckChampionMedal));
+    }
+
+    void GetMapInfoFromMap() {
+        auto map = GetApp().RootMap;
+        if (map is null) return;
+        auto mi = map.MapInfo;
+
+        if (mi.AuthorNickName.Length > 0)
+            AuthorDisplayName = mi.AuthorNickName;
+
+        SetName(mi.Name);
+        FileName = mi.FileName;
+        FileUrl = mi.Path;
+
+        AuthorScore = mi.TMObjective_AuthorTime;
+        GoldScore = mi.TMObjective_GoldTime;
+        SilverScore = mi.TMObjective_SilverTime;
+        BronzeScore = mi.TMObjective_BronzeTime;
+        SetMedalTimeStrs();
+    }
+
+    void SetMedalTimeStrs() {
+        AuthorTimeStr = Time::Format(AuthorScore);
+        GoldTimeStr = Time::Format(GoldScore);
+        SilverTimeStr = Time::Format(SilverScore);
+        BronzeTimeStr = Time::Format(BronzeScore);
+        OrderedMedalTimes = {AuthorTimeStr, GoldTimeStr, SilverTimeStr, BronzeTimeStr};
     }
 
     void CheckChampionMedal() {
