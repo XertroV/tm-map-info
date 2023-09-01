@@ -414,19 +414,26 @@ class MapInfo_Data : MapInfo::Data {
     CGameManialinkControl@ soloEndMenuFrame = null;
     bool SoloMenuOpen() {
         if (GetApp().PlaygroundScript is null) return false;
-        auto cmap = GetApp().Network.ClientManiaAppPlayground;
+        auto net = GetApp().Network;
+        auto cmap = net.ClientManiaAppPlayground;
         if (cmap is null || cmap.UILayers.Length < 2) return false;
         if (!IsGoodUISequence(cmap.UI.UISequence)) return true;
         // do we ever show mapinfo outside of Playing/Finish?
         if (backToRaceFromGhostVisible) return false;
         if (IsUISequencePlayingOrFinish(cmap.UI.UISequence)) return false;
+        auto si = cast<CTrackManiaNetworkServerInfo>(net.ServerInfo);
+        if (si.CurGameModeStr != "TM_Campaign_Local")
+            return false;
+        // this is very slow
         if (soloEndMenuFrame !is null && soloStartMenuFrame !is null) {
             return soloStartMenuFrame.Visible || soloEndMenuFrame.Visible;
         }
         bool foundStart = false, foundEnd = false;
+
         for (uint i = cmap.UILayers.Length - 1; i > 1; i--) {
             auto layer = cmap.UILayers[i];
             if (layer.ManialinkPage.Length < 10) continue;
+
             string mlpage = string(layer.ManialinkPage.SubStr(0, 64)).Trim();
             if (mlpage.StartsWith('<manialink name="UIModule_Campaign_EndRaceMenu"')) {
                 foundEnd = true;
