@@ -400,6 +400,8 @@ class MapInfo_Data : MapInfo::Data {
     }
 
     bool SettingsOpen() {
+        // settings were deprecated
+        return false;
         auto vp = GetApp().Viewport;
         if (vp.Overlays.Length < 3) return false;
         // 5 normally, report/key have 15 and 24; menu open has like 390
@@ -419,7 +421,7 @@ class MapInfo_Data : MapInfo::Data {
         if (cmap is null || cmap.UILayers.Length < 2) return false;
         if (!IsGoodUISequence(cmap.UI.UISequence)) return true;
         // do we ever show mapinfo outside of Playing/Finish?
-        if (backToRaceFromGhostVisible) return false;
+        // if (backToRaceFromGhostVisible) return false;
         if (IsUISequencePlayingOrFinish(cmap.UI.UISequence)) return false;
         auto si = cast<CTrackManiaNetworkServerInfo>(net.ServerInfo);
         if (si.CurGameModeStr != "TM_Campaign_Local")
@@ -439,18 +441,23 @@ class MapInfo_Data : MapInfo::Data {
                 foundEnd = true;
                 try {
                     @soloEndMenuFrame = cast<CGameManialinkFrame>(layer.LocalPage.MainFrame.Controls[0]).Controls[0];
-                    if (soloEndMenuFrame.Visible) return true;
+                    if (soloEndMenuFrame.Visible) break;
                 } catch {}
             }
             if (mlpage.StartsWith('<manialink name="UIModule_Campaign_StartRaceMenu"')) {
                 foundStart = true;
                 try {
                     @soloStartMenuFrame = cast<CGameManialinkFrame>(layer.LocalPage.MainFrame.Controls[0]).Controls[0];
-                    if (soloStartMenuFrame.Visible) return true;
+                    if (soloStartMenuFrame.Visible) break;
                 } catch {}
             }
-            if (foundEnd && foundStart) return false;
+            // if (foundEnd && foundStart) return false;
         }
+
+        if (soloEndMenuFrame !is null && soloStartMenuFrame !is null) {
+            return soloStartMenuFrame.Visible || soloEndMenuFrame.Visible;
+        }
+
         return false;
     }
 
