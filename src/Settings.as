@@ -23,7 +23,7 @@ bool S_DrawTMXBelowRecords = true;
 [Setting category="General" name="Show medal times below records"]
 bool S_DrawMedalsBelowRecords = true;
 
-[Setting category="General" name="Show only best 2 metal times below records"]
+[Setting category="General" name="Show only best 2 medal times below records"]
 bool S_DrawOnly2MedalsBelowRecords = false;
 
 [Setting category="General" name="Lakanta Mode" description="Middle-clicking the TMX Track ID below the records panel will load the next map (by TMX TrackID). Additionally, the TMX ID of that track will be copied to the clipboard."]
