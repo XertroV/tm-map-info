@@ -63,7 +63,7 @@ void Render() {
         if (S_ShowPersistentUI) g_MapInfo.Draw_PersistentUI();
 
         auto loadProgress = GetApp().LoadProgress;
-        isLoading = loadProgress !is null && loadProgress.State != NGameLoadProgress_SMgr::EState::Disabled;
+        isLoading = loadProgress !is null && loadProgress.State != NGameLoadProgress::EState::Disabled;
         if (isLoading) {
             g_MapInfo.Draw_LoadingScreen();
         }
