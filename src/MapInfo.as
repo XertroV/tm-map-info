@@ -399,17 +399,6 @@ class MapInfo_Data : MapInfo::Data {
         return false;
     }
 
-    bool SettingsOpen() {
-        // settings were deprecated
-        return false;
-        auto vp = GetApp().Viewport;
-        if (vp.Overlays.Length < 3) return false;
-        // 5 normally, report/key have 15 and 24; menu open has like 390
-        // prior strat was satatic 10 but that doesn't work. (I had it at index 14 out of 17 total elements)
-        // note: overlay has sort order 14, mb filter on that
-        return vp.Overlays[vp.Overlays.Length - 3].m_CorpusVisibles.Length > 10;
-    }
-
     // pretty expensive when layers are checked (1.3ms ish)
     // but caching the manialink controls seems fine
     CGameManialinkControl@ soloStartMenuFrame = null;
@@ -464,7 +453,7 @@ class MapInfo_Data : MapInfo::Data {
     bool ShouldDrawUI {
         get {
             return _GameUIVisible && isRecordsElementVisible
-                && !ScoreTableVisible() && !SettingsOpen()
+                && !ScoreTableVisible()
                 && !SoloMenuOpen()
                 ;
         }
@@ -536,6 +525,8 @@ class MapInfo_Data : MapInfo::Data {
             if (Race_Record_Frame is null) return false;
             // should always be visible
             if (frame is null || !frame.Visible) return false;
+            if (!Race_Record_Frame.Visible) return false;
+            if (!ParentsNullOrVisible(Race_Record_Frame, 3)) return false;
             // if (!openedExploreNod) {
             //     openedExploreNod = true;
             //     ExploreNod(frame);
@@ -617,6 +608,15 @@ class MapInfo_Data : MapInfo::Data {
         return true;
     }
 }
+
+
+bool ParentsNullOrVisible(CGameManialinkControl@ el, uint nbParentsToCheck = 1) {
+    if (nbParentsToCheck == 0) return true;
+    if (el is null || el.Parent is null) return true;
+    if (!el.Parent.Visible) return false;
+    return ParentsNullOrVisible(el.Parent, nbParentsToCheck - 1);
+}
+
 
 /**
  * Class extension to draw map info to screen
