@@ -826,10 +826,13 @@ class MapInfo_UI : MapInfo_Data {
         }
 
         vec2 hoverScale(widthSquish, 1);
+        /* 1st: detection of main rect
+           2nd: detection of hovering side panel
+           3rd: detection of hovering title/name above records
+           */
         bool rawHover = IsWithin(g_MouseCoords, rect.xy * hoverScale, vec2(rect.z * widthSquish, rect.w) + vec2(gap, 0))
-            || IsWithin(g_MouseCoords, rect.xy * hoverScale + vec2(rect.z * widthSquish + gap, 0), lastMapInfoSize)
+            || IsWithin(g_MouseCoords, rect.xy * hoverScale + vec2(rect.z * widthSquish + gap, -topAuxInfoRect.w), lastMapInfoSize)
             || IsWithin(g_MouseCoords, topAuxInfoRect.xy * hoverScale, topAuxInfoRect.zw)
-            ;
             ;
         if (hoverAnim.Update(!closed && rawHover, slideFrameProgress)) {
             DrawHoveredInterface(rect, fs, textHOffset, gap);
