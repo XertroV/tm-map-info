@@ -17,6 +17,15 @@ float S_LoadingScreenYOffsetPct = 12.0;
 [Setting category="General" name="Show author flags"]
 bool S_ShowAuthorFlags = true;
 
+enum AboveRecChoice {
+    None = 0,
+    Only_Map_Name = 1,
+    Only_Author = 2,
+    Both = 3,
+}
+[Setting category="General" name="Show Map Name and/or Author above records"]
+AboveRecChoice S_DrawTitleAuthorAboveRecords = AboveRecChoice::Both;
+
 [Setting category="General" name="Show TMX Track ID below records if it exists"]
 bool S_DrawTMXBelowRecords = true;
 

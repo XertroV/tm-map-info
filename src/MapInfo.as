@@ -662,6 +662,7 @@ class MapInfo_UI : MapInfo_Data {
     float recordsGuessedHeight;
     float extraHeightBelowRecords = 0;
     vec4 auxInfoRect;
+    vec4 topAuxInfoRect;
     vec4 medalsInfoRect;
 
     vec4 UpdateBounds() {
@@ -769,6 +770,7 @@ class MapInfo_UI : MapInfo_Data {
         // animate sliding away when record UI opens/closes
         // first, set up a scissor similar to the records UI
         nvg::Scissor(rect.x, rect.y, rect.z, rect.w);
+
         // now, offset everything depending on slider progress
         nvg::Translate(vec2((1.0 - mainAnim.Progress) * rect.z, 0));
         // that's all we need.
@@ -785,11 +787,27 @@ class MapInfo_UI : MapInfo_Data {
         nvg::ResetScissor();
         nvg::ResetTransform();
 
+        // Aux info, name, author, medals, tmxid
+
+        float hScale = 0.65;
+        nvg::FontSize(fs * hScale);
+
+        topAuxInfoRect = vec4();
+        if (S_DrawTitleAuthorAboveRecords > 0) {
+            int nbLines = S_DrawTitleAuthorAboveRecords == 3 ? 2 : 1;
+            float topAuxHeight = rect.w * hScale * nbLines;
+            topAuxInfoRect = vec4(rect.x + rect.z - recordsWidth, rect.y - gap * 1 - topAuxHeight, recordsWidth, topAuxHeight);
+            Draw_MapNameAuthorAboveRecords();
+            // lets us refer to one value for extra height in hover side panel
+            topAuxInfoRect.w += gap;
+        }
+
+        hScale = 0.75;
+        nvg::FontSize(fs * hScale);
+
         extraHeightBelowRecords = 0;
-        float hScale = 0.75;
         auxInfoRect = vec4(rect.x + rect.z - recordsWidth, rect.y + guessedHeightPx + gap * 2 + rect.w, recordsWidth, rect.w * hScale);
         bool drawTmxId = S_DrawTMXBelowRecords && UploadedToTMX == 1;
-        nvg::FontSize(fs * hScale);
         if (drawTmxId) {
             extraHeightBelowRecords += nbRecordsShown >= 8 ? (auxInfoRect.w * (nbRecordsShown - 8) + auxInfoRect.w + gap) : 0;
             Draw_TMXBelowRecords(auxInfoRect);
@@ -809,7 +827,9 @@ class MapInfo_UI : MapInfo_Data {
 
         vec2 hoverScale(widthSquish, 1);
         bool rawHover = IsWithin(g_MouseCoords, rect.xy * hoverScale, vec2(rect.z * widthSquish, rect.w) + vec2(gap, 0))
-            || IsWithin(g_MouseCoords, rect.xy * hoverScale + vec2(rect.z * widthSquish + gap, 0), lastMapInfoSize);
+            || IsWithin(g_MouseCoords, rect.xy * hoverScale + vec2(rect.z * widthSquish + gap, 0), lastMapInfoSize)
+            || IsWithin(g_MouseCoords, topAuxInfoRect.xy * hoverScale, topAuxInfoRect.zw)
+            ;
             ;
         if (hoverAnim.Update(!closed && rawHover, slideFrameProgress)) {
             DrawHoveredInterface(rect, fs, textHOffset, gap);
@@ -921,6 +941,36 @@ class MapInfo_UI : MapInfo_Data {
         nvg::ResetTransform();
     }
 
+    void Draw_MapNameAuthorAboveRecords() {
+        nvg::Scale(widthSquish, 1);
+        nvg::Scissor(topAuxInfoRect.x, topAuxInfoRect.y, topAuxInfoRect.z, topAuxInfoRect.w);
+        nvg::Translate(vec2((1.0 - mainAnim.Progress) * topAuxInfoRect.z, 0));
+
+        nvg::BeginPath();
+        DrawBgRect(topAuxInfoRect.xy, topAuxInfoRect.zw);
+        nvg::ClosePath();
+
+        auto midPoint = topAuxInfoRect.xy + topAuxInfoRect.zw * vec2(.5, .55);
+        auto midPointUpper = topAuxInfoRect.xy + topAuxInfoRect.zw * vec2(.5, .28);
+        auto midPointLower = topAuxInfoRect.xy + topAuxInfoRect.zw * vec2(.5, .72);
+
+        nvg::FillColor(vec4(1.0, 1, 1, 1));
+
+        bool drawBoth = S_DrawTitleAuthorAboveRecords == AboveRecChoice::Both;
+        bool drawName = drawBoth || S_DrawTitleAuthorAboveRecords == AboveRecChoice::Only_Map_Name;
+        bool drawAuthor = drawBoth || S_DrawTitleAuthorAboveRecords == AboveRecChoice::Only_Author;
+        if (drawName) {
+            nvg::Text(drawBoth ? midPointUpper : midPoint, CleanName);
+        }
+        if (drawAuthor) {
+            nvg::FillColor(vec4(.5, .5, .5, 1));
+            nvg::Text(drawBoth ? midPointLower : midPoint, "by " + AuthorDisplayName);
+        }
+
+        nvg::ResetScissor();
+        nvg::ResetTransform();
+    }
+
     void Draw_LoadingScreen() {
         if (!S_ShowLoadingScreenInfo) return;
 
@@ -1021,10 +1071,10 @@ class MapInfo_UI : MapInfo_Data {
 
         nvg::BeginPath();
 
-        vec2 tl = rect.xyz.xy + vec2(rect.z + gap, 0);
+        vec2 tl = rect.xyz.xy + vec2(rect.z + gap, 0) - vec2(0, topAuxInfoRect.w);
         float rowsHeight = yStep * nbRows + xPad * 0.5;
         float fullWidth = HI_MaxCol1 + HI_MaxCol2 + xPad * 4.0;
-        float thumbnailFrameHeight = Math::Min(fullRecordsHeight * screen.y + extraHeightBelowRecords - rowsHeight, fullWidth);
+        float thumbnailFrameHeight = Math::Min(fullRecordsHeight * screen.y + extraHeightBelowRecords + topAuxInfoRect.w - rowsHeight, fullWidth);
         float thumbnailHeight = thumbnailFrameHeight - xPad * 2.0;
         if (ThumbnailTexture is null) thumbnailFrameHeight = 0.0;
         vec2 fullSize = vec2(fullWidth, rowsHeight + thumbnailFrameHeight);
@@ -1190,6 +1240,8 @@ class MapInfo_UI : MapInfo_Data {
                     UI::TableNextColumn();
                     UI::Text(TrackIDStr);
 
+                    if (UI::Button("TM.IO")) OnClickTMioButton();
+                    UI::SameLine();
                     if (UI::Button("TMX")) OnClickTmxButton();
                     UI::SameLine();
                     if (UI::Button("TMDojo")) OnClickTMDojoButton();
