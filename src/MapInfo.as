@@ -926,7 +926,7 @@ class MapInfo_UI : MapInfo_Data {
 
         string[] lines;
         lines.InsertLast(g_MapInfo.Name);
-        lines.InsertLast("by " + g_MapInfo.AuthorDisplayName);
+        lines.InsertLast("by " + ColoredString(g_MapInfo.AuthorDisplayName));
         lines.InsertLast("");
         lines.InsertLast("Published: " + g_MapInfo.DateStr);
         if (TOTDStr.Length > 0)
