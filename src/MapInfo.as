@@ -797,7 +797,7 @@ class MapInfo_UI : MapInfo_Data {
             int nbLines = S_DrawTitleAuthorAboveRecords == 3 ? 2 : 1;
             float topAuxHeight = rect.w * hScale * nbLines;
             topAuxInfoRect = vec4(rect.x + rect.z - recordsWidth, rect.y - gap * 1 - topAuxHeight, recordsWidth, topAuxHeight);
-            Draw_MapNameAuthorAboveRecords();
+            Draw_MapNameAuthorAboveRecords(gap);
             // lets us refer to one value for extra height in hover side panel
             topAuxInfoRect.w += gap;
         }
@@ -944,7 +944,7 @@ class MapInfo_UI : MapInfo_Data {
         nvg::ResetTransform();
     }
 
-    void Draw_MapNameAuthorAboveRecords() {
+    void Draw_MapNameAuthorAboveRecords(float gap) {
         nvg::Scale(widthSquish, 1);
         nvg::Scissor(topAuxInfoRect.x, topAuxInfoRect.y, topAuxInfoRect.z, topAuxInfoRect.w);
         nvg::Translate(vec2((1.0 - mainAnim.Progress) * topAuxInfoRect.z, 0));
@@ -963,7 +963,11 @@ class MapInfo_UI : MapInfo_Data {
         bool drawName = drawBoth || S_DrawTitleAuthorAboveRecords == AboveRecChoice::Only_Map_Name;
         bool drawAuthor = drawBoth || S_DrawTitleAuthorAboveRecords == AboveRecChoice::Only_Author;
         if (drawName) {
-            nvg::Text(drawBoth ? midPointUpper : midPoint, CleanName);
+            auto nameBounds = nvg::TextBounds(CleanName);
+            auto xScale = Math::Clamp(Math::Min(nameBounds.x, topAuxInfoRect.z - gap * 2.) / nameBounds.x, 0.001, 1.0);
+            nvg::Scale(xScale, 1);
+            nvg::Text((drawBoth ? midPointUpper : midPoint) / vec2(xScale, 1), CleanName);
+            nvg::Scale(1.0 / xScale, 1);
         }
         if (drawAuthor) {
             nvg::FillColor(vec4(.5, .5, .5, 1));
