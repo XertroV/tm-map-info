@@ -30,7 +30,7 @@ class NvgText {
                 continue;
             }
             string firstChar = parts[i].SubStr(0, 1).ToLower();
-            if (firstChar[0] == zChar) {
+            if (firstChar[0] == zChar || firstChar[0] == gChar) {
                 parts[i] = parts[i].SubStr(1);
                 cols.InsertLast(vec3(-1, -1, -1));
                 continue;
@@ -62,9 +62,12 @@ class NvgText {
     uint8 zChar = "z"[0];
     uint8 iChar = "i"[0];
     uint8 gChar = "g"[0];
+    uint8 ltChar = "<"[0];
+    uint8 gtChar = ">"[0];
 
     bool IsASkipChar(uint8 char) {
-        return char == oChar || char == gChar || char == iChar || char == sChar || char == "<"[0] || char == ">"[0];
+        //  || char == gChar
+        return char == oChar || char == iChar || char == sChar || char == ltChar || char == gtChar;
     }
 
     float strokeIters = 9;
