@@ -101,6 +101,17 @@ class MapInfo_Data : MapInfo::Data {
         startnew(CoroutineFunc(this.GetMapTMDojoStatus));
         startnew(CoroutineFunc(this.MonitorRecordsVisibility));
         startnew(CoroutineFunc(this.GetPersonalBest));
+        startnew(CoroutineFunc(this.RefreshMedalColorsLoop));
+    }
+
+    void RefreshMedalColorsLoop() {
+        while (!SHUTDOWN) {
+            if (S_RefreshMedalColors) {
+                S_RefreshMedalColors = false;
+                RefreshMedalColors();
+            }
+            yield();
+        }
     }
 
     void GetPersonalBest() {
@@ -239,13 +250,20 @@ class MapInfo_Data : MapInfo::Data {
                 ChampionTimeStr = Time::Format(ChampionScore);
                 OrderedMedalTimesUint.InsertAt(0, ChampionScore);
                 OrderedMedalTimes.InsertAt(0, ChampionTimeStr);
-                OrderedMedalColors.InsertAt(0, vec4(0.847f, 0.165f, 0.337f, 1.000f));
+                OrderedMedalColors.InsertAt(0, S_MedalColorChampion);
                 UpdatePBMedal();
                 break;
             }
             sleep(250);
         }
 #endif
+    }
+
+    void RefreshMedalColors() {
+        OrderedMedalColors = {S_MedalColorAuthor, S_MedalColorGold, S_MedalColorSilver, S_MedalColorBronze};
+        if (ChampionScore > 0) {
+            OrderedMedalColors.InsertAt(0, S_MedalColorChampion);
+        }
     }
 
     MapThumbnailTexture@ Textures = null;

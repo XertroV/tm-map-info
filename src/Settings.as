@@ -54,7 +54,18 @@ vec4 S_DeltaColorNegative = vec4(0.170f, 0.463f, 0.943f, 1.000f);
 [Setting category="Medal Times" name="Positive PB Delta Color" color]
 vec4 S_DeltaColorPositive = vec4(0.930f, 0.308f, 0.053f, 1.000f);
 
-
+[Setting category="Medal Times" name="Champion Medal Color" color]
+vec4 S_MedalColorChampion = vec4(0.847f, 0.165f, 0.337f, 1.000f);
+[Setting category="Medal Times" name="Author Medal Color" color]
+vec4 S_MedalColorAuthor = vec4(0.024f, 0.604f, 0.065f, 1.000f);
+[Setting category="Medal Times" name="Gold Medal Color" color]
+vec4 S_MedalColorGold = vec4(0.868f, 0.725f, 0.214f, 1.000f);
+[Setting category="Medal Times" name="Silver Color" color]
+vec4 S_MedalColorSilver = vec4(0.537f, 0.604f, 0.604f, 1.0);
+[Setting category="Medal Times" name="Bronze Color" color]
+vec4 S_MedalColorBronze = vec4(0.533f, 0.303f, 0.143f, 1.000f);
+[Setting category="Medal Times" name="Refresh Medal Colors Next Frame" description="Is set to false the next frame that the medal colors are updated. This is more like a button than a checkbox."]
+bool S_RefreshMedalColors = false;
 
 
 [Setting category="Loading Screen" name="Show map info on loading screen"]
