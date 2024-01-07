@@ -85,6 +85,7 @@ class MapInfo_Data : MapInfo::Data {
         author = map.AuthorNickName;
         AuthorDisplayName = map.MapInfo.AuthorNickName;
         AuthorCountryFlag = map.AuthorZoneIconUrl.SubStr(map.AuthorZoneIconUrl.Length - 7);
+        GetMapInfoFromMap();
         StartInitializationCoros();
     }
 
@@ -99,6 +100,38 @@ class MapInfo_Data : MapInfo::Data {
         startnew(CoroutineFunc(this.GetMapTMXStatus));
         startnew(CoroutineFunc(this.GetMapTMDojoStatus));
         startnew(CoroutineFunc(this.MonitorRecordsVisibility));
+        startnew(CoroutineFunc(this.GetPersonalBest));
+    }
+
+    void GetPersonalBest() {
+        while (!SHUTDOWN) {
+            auto app = GetApp();
+            auto cmap = app.Network.ClientManiaAppPlayground;
+            if (cmap is null) {
+                warn("GetPersonalBest cmap null");
+                return;
+            }
+            auto scoreMgr = cmap.ScoreMgr;
+            auto userId = app.UserManagerScript.Users[0].Id;
+            PersonalBestTime = scoreMgr.Map_GetRecord_v2(userId, uid, "PersonalBest", "", "TimeAttack", "");
+            UpdatePBMedal();
+            sleep(100);
+        }
+    }
+
+    void UpdatePBMedal() {
+        PersonalBestMedal = GetMedalForTime(PersonalBestTime);
+    }
+
+    int GetMedalForTime(uint time) {
+        auto len = OrderedMedalTimesUint.Length;
+        if (len > 0 && time <= OrderedMedalTimesUint[0]) return 0;
+        if (len > 1 && time <= OrderedMedalTimesUint[1]) return 1;
+        if (len > 2 && time <= OrderedMedalTimesUint[2]) return 2;
+        if (len > 3 && time <= OrderedMedalTimesUint[3]) return 3;
+        if (len > 4 && time <= OrderedMedalTimesUint[4]) return 4;
+        if (len > 5 && time <= OrderedMedalTimesUint[5]) return 5;
+        return 999;
     }
 
     void RefreshTOTDStatus() {
@@ -193,6 +226,7 @@ class MapInfo_Data : MapInfo::Data {
         SilverTimeStr = Time::Format(SilverScore);
         BronzeTimeStr = Time::Format(BronzeScore);
         OrderedMedalTimes = {AuthorTimeStr, GoldTimeStr, SilverTimeStr, BronzeTimeStr};
+        OrderedMedalTimesUint = {AuthorScore, GoldScore, SilverScore, BronzeScore};
     }
 
     void CheckChampionMedal() {
@@ -203,8 +237,10 @@ class MapInfo_Data : MapInfo::Data {
             ChampionScore = ChampionMedals::GetCMTime();
             if (ChampionScore > 0) {
                 ChampionTimeStr = Time::Format(ChampionScore);
+                OrderedMedalTimesUint.InsertAt(0, ChampionScore);
                 OrderedMedalTimes.InsertAt(0, ChampionTimeStr);
                 OrderedMedalColors.InsertAt(0, vec4(0.847f, 0.165f, 0.337f, 1.000f));
+                UpdatePBMedal();
                 break;
             }
             sleep(250);
@@ -817,7 +853,13 @@ class MapInfo_UI : MapInfo_Data {
 
         hScale = 0.6;
         nvg::FontSize(fs * hScale);
-        float medalsHeight = (S_DrawOnly2MedalsBelowRecords ? 1. : 2.) * rect.w * hScale;
+        float nbRows = (S_DrawOnly2MedalsBelowRecords ? 1. : 2.);
+        bool drawPbs = S_ShowPbDeltaToMedals && PersonalBestTime > 0;
+        float pbMult = drawPbs ? 2.0 : 1.0;
+        nbRows *= pbMult;
+        if (drawPbs && S_HideMedalsWorseThanPb) nbRows = Math::Min(float(PersonalBestMedal + 1), nbRows);
+        float medalsHeight = nbRows * rect.w * hScale;
+
         medalsInfoRect = vec4(auxInfoRect.x, auxInfoRect.y, recordsWidth, medalsHeight);
         if (S_DrawMedalsBelowRecords || S_DrawOnly2MedalsBelowRecords) {
             if (drawTmxId) {
@@ -931,19 +973,55 @@ class MapInfo_UI : MapInfo_Data {
         nvg::BeginPath();
         DrawBgRect(medalsInfoRect.xy, medalsInfoRect.zw);
         nvg::ClosePath();
-        float yPropFirstRow = S_DrawOnly2MedalsBelowRecords ? (.5 + .025) : (.28 + .025);
-        nvg::FillColor(OrderedMedalColors[0]);
-        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.29, yPropFirstRow), OrderedMedalTimes[0]);
-        nvg::FillColor(OrderedMedalColors[1]);
-        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.71, yPropFirstRow), OrderedMedalTimes[1]);
-        if (!S_DrawOnly2MedalsBelowRecords) {
-            nvg::FillColor(OrderedMedalColors[2]);
-            nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.29, .72 + .025), OrderedMedalTimes[2]);
-            nvg::FillColor(OrderedMedalColors[3]);
-            nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(.71, .72 + .025), OrderedMedalTimes[3]);
-        }
+        _Draw_MedalsBelowRecords_Inner();
         nvg::ResetScissor();
         nvg::ResetTransform();
+    }
+
+    void _Draw_MedalsBelowRecords_Inner() {
+        float topBottomPad = 0.025;
+        float topOffset = 0.025;
+
+        float nbRows = (S_DrawOnly2MedalsBelowRecords ? 1. : 2.);
+        bool drawPbs = S_ShowPbDeltaToMedals && PersonalBestTime > 0;
+        nbRows *= drawPbs ? 2.0 : 1.0;
+        if (drawPbs && S_HideMedalsWorseThanPb) nbRows = Math::Min(float(PersonalBestMedal + 1), nbRows);
+        float rowDelta = (1.0 - (topBottomPad * 2. + topOffset)) / (nbRows);
+        float yPropNextRow = topBottomPad + topOffset + rowDelta / 2.0;
+        // float yPropFirstRow = S_DrawOnly2MedalsBelowRecords ? (.5 + .025) : (.28 + .025);
+        float col1Pos = .29;
+        float col2Pos = .71;
+        float oddMedalsXPos = drawPbs ? col1Pos : col2Pos;
+
+        nvg::FillColor(OrderedMedalColors[0]);
+        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(col1Pos, yPropNextRow), OrderedMedalTimes[0]);
+        if (drawPbs) _DrawPbDelta(col2Pos, yPropNextRow, OrderedMedalTimesUint[0]);
+        if (drawPbs && S_HideMedalsWorseThanPb && PersonalBestMedal == 0) return;
+        if (drawPbs) yPropNextRow += rowDelta;
+
+        nvg::FillColor(OrderedMedalColors[1]);
+        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(oddMedalsXPos, yPropNextRow), OrderedMedalTimes[1]);
+        if (drawPbs) _DrawPbDelta(col2Pos, yPropNextRow, OrderedMedalTimesUint[1]);
+        if (S_HideMedalsWorseThanPb && PersonalBestMedal == 1) return;
+        yPropNextRow += rowDelta;
+
+        if (!S_DrawOnly2MedalsBelowRecords) {
+            nvg::FillColor(OrderedMedalColors[2]);
+            nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(col1Pos, yPropNextRow), OrderedMedalTimes[2]);
+            if (drawPbs) _DrawPbDelta(col2Pos, yPropNextRow, OrderedMedalTimesUint[2]);
+            if (drawPbs && S_HideMedalsWorseThanPb && PersonalBestMedal == 2) return;
+            if (drawPbs) yPropNextRow += rowDelta;
+
+            nvg::FillColor(OrderedMedalColors[3]);
+            nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(oddMedalsXPos, yPropNextRow), OrderedMedalTimes[3]);
+            if (drawPbs) _DrawPbDelta(col2Pos, yPropNextRow, OrderedMedalTimesUint[3]);
+        }
+    }
+
+    void _DrawPbDelta(float xPos, float yPropNextRow, uint medalTime) {
+        bool isNeg = medalTime < PersonalBestTime;
+        nvg::FillColor(isNeg ? S_DeltaColorPositive : S_DeltaColorNegative);
+        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(xPos, yPropNextRow), (isNeg ? "+" : "-") + Time::Format(Math::Abs(int(PersonalBestTime) - int(medalTime)), true, false));
     }
 
     void Draw_MapNameAuthorAboveRecords(float gap) {
