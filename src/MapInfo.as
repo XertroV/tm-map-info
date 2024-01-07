@@ -10,7 +10,9 @@ void CheckForNewMap() {
     string mapUid;
 
     // todo: check app.RootMap.MapInfo.IsPlayable corresponds to unvalidated maps
-    if (app.RootMap is null || !app.RootMap.MapInfo.IsPlayable || app.Editor !is null) { // app.CurrentPlayground is null ||
+    // it does not, tmx 40066 is an example
+    // || !app.RootMap.MapInfo.IsPlayable
+    if (app.RootMap is null || app.Editor !is null) { // app.CurrentPlayground is null ||
         mapUid = "";
     } else {
         mapUid = app.RootMap.MapInfo.MapUid;
