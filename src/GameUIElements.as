@@ -135,6 +135,7 @@ class KnockoutMLDetector : ManialinkDetector {
 }
 
 class RecordsMLDetector : ManialinkDetector {
+    private CGameManialinkFrame@ frameRecords = null;
     private CGameManialinkFrame@ rankingsFrame = null;
     private CGameManialinkFrame@ hidePbFrame = null;
     private CGameManialinkFrame@ frameNoRecords = null;
@@ -149,13 +150,14 @@ class RecordsMLDetector : ManialinkDetector {
     }
 
     void FindExtraAfterMainEl() override {
+        @frameRecords = cast<CGameManialinkFrame>(MainFrame.GetFirstChild("frame-records"));
         @rankingsFrame = cast<CGameManialinkFrame>(MainFrame.GetFirstChild("frame-ranking"));
         @hidePbFrame = cast<CGameManialinkFrame>(MainFrame.GetFirstChild("frame-toggle-pb"));
         @frameNoRecords = cast<CGameManialinkFrame>(MainFrame.GetFirstChild("frame-no-records"));
         // auto backBtn = MainFrame.GetFirstChild("button-back-to-race");
     }
 
-    void ExtraAfterIsVisible() override {
+    bool ExtraAfterIsVisible() override {
         if (rankingsFrame !is null) {
             nbRecordsShown = 0;
             for (uint i = 0; i < rankingsFrame.Controls.Length; i++) {
@@ -169,6 +171,7 @@ class RecordsMLDetector : ManialinkDetector {
                 nbRecordsShown++;
             }
         }
+        return (frameRecords !is null && frameRecords.Visible);
     }
 
     float GuessHeight(MapInfo_Data@ mapInfo) override {
@@ -252,7 +255,7 @@ class ManialinkDetector {
 
     // for overriding
     void FindExtraAfterMainEl() {}
-    void ExtraAfterIsVisible() {}
+    bool ExtraAfterIsVisible() { return true; }
 
     vec2 mainFrameAbsPos;
     float mainFrameAbsScale = 1.0;
@@ -277,12 +280,11 @@ class ManialinkDetector {
         mainFrameAbsScale = MainFrame.AbsoluteScale;
         // if the abs scale is too low (or negative) it causes problems. no legit case is like this so just set to 1
         if (mainFrameAbsScale <= 0.1) mainFrameAbsScale = 1.0;
-        ExtraAfterIsVisible();
         if (hasSlideFrame) {
             slideProgress = (SlideFrame.RelativePosition_V3.x + slideWidth - slideShowingX) / slideWidth;
-            return slideProgress > 0.0;
         }
-        return true;
+        if (!ExtraAfterIsVisible()) return false;
+        return (!hasSlideFrame || slideProgress > 0.0);
     }
 
     // bool IsUISafeToCheck(CGameManiaAppPlayground@ cmap = null) {
