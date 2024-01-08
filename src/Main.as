@@ -32,8 +32,12 @@ void CacheTodaysDate() {
 bool _GameUIVisible = false;
 void MonitorUIVisible() {
     while (true) {
-        sleep(100);
+        yield();
         _GameUIVisible = UI::IsGameUIVisible();
+        if (g_MapInfo !is null && GetApp().Network.ClientManiaAppPlayground is null) {
+            g_MapInfo.Shutdown();
+            @g_MapInfo = null;
+        }
     }
 }
 

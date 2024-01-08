@@ -12,7 +12,7 @@ void CheckForNewMap() {
     // todo: check app.RootMap.MapInfo.IsPlayable corresponds to unvalidated maps
     // it does not, tmx 40066 is an example
     // || !app.RootMap.MapInfo.IsPlayable
-    if (app.RootMap is null || app.Editor !is null) { // app.CurrentPlayground is null ||
+    if (app.RootMap is null) { // || app.Editor !is null) { // app.CurrentPlayground is null ||
         mapUid = "";
     } else {
         mapUid = app.RootMap.MapInfo.MapUid;
@@ -67,7 +67,7 @@ class MapInfo_Data : MapInfo::Data {
 
     NvgText@ NvgName;
 
-    protected bool SHUTDOWN = false;
+    bool SHUTDOWN = false;
 
     NvgButton@ TmDojoButton = null;
 
@@ -77,8 +77,15 @@ class MapInfo_Data : MapInfo::Data {
     NvgButton@ TMXButton = null;
     NvgButton@ TMXAuthorButton = null;
 
+    bool isCotdQuali = false;
+    bool isKoRounds = false;
+    bool isNormalRecords = true;
+
+    ManialinkDetectorGroup@ mlDetector = null;
+
     MapInfo_Data() {
-        auto map = GetApp().RootMap;
+        auto app = GetApp();
+        auto map = app.RootMap;
         if (map is null) throw("Cannot instantiate MapInfo_Data when RootMap is null.");
         uid = map.EdChallengeId;
         SetName(map.MapName);
@@ -86,7 +93,20 @@ class MapInfo_Data : MapInfo::Data {
         AuthorDisplayName = map.MapInfo.AuthorNickName;
         AuthorCountryFlag = map.AuthorZoneIconUrl.SubStr(map.AuthorZoneIconUrl.Length - 7);
         GetMapInfoFromMap();
+        InitializeMLFinder();
         StartInitializationCoros();
+    }
+
+    void InitializeMLFinder() {
+        auto si = cast<CTrackManiaNetworkServerInfo>(GetApp().Network.ServerInfo);
+        isCotdQuali = si.CurGameModeStr == "TM_COTDQualifications_Online"
+            || si.ClientUIRootModuleUrl.EndsWith("COTDQualifications.Script.txt");
+        isKoRounds = si.CurGameModeStr.StartsWith("TM_Knockout");
+        isNormalRecords = !isCotdQuali && !isKoRounds;
+        if (isNormalRecords) @mlDetector = ManialinkDetectorGroup().Add(RecordsMLDetector());
+        else if (isCotdQuali) @mlDetector = ManialinkDetectorGroup().Add(COTDQualiPMLDetector(), COTDQualiRankingMLDetector());
+        else if (isKoRounds) @mlDetector = ManialinkDetectorGroup().Add(KnockoutMLDetector());
+        print("Initialize ML Finder, cotd: " + isCotdQuali + ", KO: " + isKoRounds + ", normal: " + isNormalRecords);
     }
 
     void Shutdown() {
@@ -190,8 +210,10 @@ class MapInfo_Data : MapInfo::Data {
         AuthorAccountId = info.AuthorAccountId;
         AuthorWebServicesUserId = info.AuthorWebServicesUserId;
         // Some campaign maps are authored by https://trackmania.io/#/player/nadeo and info.AuthorDisplayName isn't set for these maps.
-        if (info.AuthorDisplayName.Length > 0)
-            AuthorDisplayName = info.AuthorDisplayName;
+        // if (info.AuthorDisplayName.Length > 0)
+        //     AuthorDisplayName = info.AuthorDisplayName;
+        // todo: check this works fine in most cases
+        // see issue #20 for example of why this should be commented.
 
         SetName(info.Name);
         FileName = info.FileName;
@@ -410,35 +432,21 @@ class MapInfo_Data : MapInfo::Data {
         OpenBrowserURL("https://tmdojo.com/maps/" + uid + "?utm_source=mapinfo-plugin");
     }
 
-    bool IsGoodUISequence(CGamePlaygroundUIConfig::EUISequence uiSeq) {
-        return uiSeq == CGamePlaygroundUIConfig::EUISequence::Playing
-            || uiSeq == CGamePlaygroundUIConfig::EUISequence::Finish
-            || uiSeq == CGamePlaygroundUIConfig::EUISequence::EndRound
-            || uiSeq == CGamePlaygroundUIConfig::EUISequence::UIInteraction
-            ;
-    }
-
-    bool IsUISequencePlayingOrFinish(CGamePlaygroundUIConfig::EUISequence uiSeq) {
-        return uiSeq == CGamePlaygroundUIConfig::EUISequence::Playing
-            || uiSeq == CGamePlaygroundUIConfig::EUISequence::Finish
-            ;
-    }
-
-    private uint lastNbUilayers = 0;
-    bool IsUIPopulated() {
-        auto cmap = GetApp().Network.ClientManiaAppPlayground;
-        auto cp = GetApp().CurrentPlayground;
-        if (cmap is null || cp is null || cp.UIConfigs.Length == 0 || cmap.UI is null) return false;
-        if (!IsGoodUISequence(cmap.UI.UISequence)) return false;
-        auto nbUiLayers = cmap.UILayers.Length;
-        // if the number of UI layers decreases it's probably due to a recovery restart, so we don't want to act on old references
-        if (nbUiLayers <= 2 || nbUiLayers < lastNbUilayers) {
-            log_debug('nbUiLayers: ' + nbUiLayers + '; lastNbUilayers' + lastNbUilayers);
-            return false;
-        }
-        lastNbUilayers = nbUiLayers;
-        return true;
-    }
+    // private uint lastNbUilayers = 0;
+    // bool IsUIPopulated() {
+    //     auto cmap = GetApp().Network.ClientManiaAppPlayground;
+    //     auto cp = GetApp().CurrentPlayground;
+    //     if (cmap is null || cp is null || cp.UIConfigs.Length == 0 || cmap.UI is null) return false;
+    //     if (!IsGoodUISequence(cmap.UI.UISequence)) return false;
+    //     auto nbUiLayers = cmap.UILayers.Length;
+    //     // if the number of UI layers decreases it's probably due to a recovery restart, so we don't want to act on old references
+    //     if (nbUiLayers <= 2 || nbUiLayers < lastNbUilayers) {
+    //         log_debug('nbUiLayers: ' + nbUiLayers + '; lastNbUilayers' + lastNbUilayers);
+    //         return false;
+    //     }
+    //     lastNbUilayers = nbUiLayers;
+    //     return true;
+    // }
 
     bool ScoreTableVisible() {
         // frame-scorestable-layer is the frame that shows scoreboard
@@ -508,169 +516,174 @@ class MapInfo_Data : MapInfo::Data {
 
     bool ShouldDrawUI {
         get {
-            return _GameUIVisible && isRecordsElementVisible
+            return _GameUIVisible && mlDetector.isElementVisible
                 && !ScoreTableVisible()
                 && !SoloMenuOpen()
                 ;
         }
     }
-    private bool isRecordsElementVisible = false;
+    // private bool isRecordsElementVisible = false;
     private void MonitorRecordsVisibility() {
-        // these traces are to help investigate crashes -- can be commented later for production (or we could make a loglevel thing so ppl can turn them back on if they get crashes)
-        log_debug('test populated');
-        while (!IsUIPopulated()) yield();
-        log_debug('test safe');
-        if (!IsSafeToCheckUI()) {
-            log_warn("unexpectedly failed UI safety check. probably in the editor or something.");
-            return;
-        }
-        log_debug('is safe');
-        // once we detect things have started to load, wait another second
-        log_debug('sleep');
-        for (uint i = 0; i < 10; i++) yield();
-        log_debug('assert safe');
-        yield();
-        while (!IsSafeToCheckUI()) yield(); // throw("Should only happen if we exit the map super fast.");
-        log_debug('find UI elements');
-        while (IsSafeToCheckUI() && !FindUIElements()) {
-            sleep(100);
-        }
-        log_debug('done checking ui. found: ' + lastRecordsLayerIndex);
-        yield();
-        log_debug('initial records element vis check');
-        yield();
-        isRecordsElementVisible = IsSafeToCheckUI();
-        log_debug('records element vis check, can proceed: ' + tostring(isRecordsElementVisible));
-        yield();
-        isRecordsElementVisible = isRecordsElementVisible && IsRecordElementVisible();
-        yield();
-        log_debug('records visible: ' + tostring(isRecordsElementVisible));
-        yield();
+        mlDetector.MonitorVisibility(this);
+        // // these traces are to help investigate crashes -- can be commented later for production (or we could make a loglevel thing so ppl can turn them back on if they get crashes)
+        // log_debug('test populated');
+        // while (!IsUIPopulated()) yield();
+        // log_debug('test safe');
+        // if (!mlIsSafeToCheckUI()) {
+        //     log_warn("unexpectedly failed UI safety check. probably in the editor or something.");
+        //     return;
+        // }
+        // log_debug('is safe');
+        // // once we detect things have started to load, wait another second
+        // log_debug('sleep');
+        // for (uint i = 0; i < 10; i++) yield();
+        // log_debug('assert safe');
+        // yield();
+        // while (!IsSafeToCheckUI()) yield(); // throw("Should only happen if we exit the map super fast.");
+        // log_debug('find UI elements');
+        // while (IsSafeToCheckUI() && !FindUIElements()) {
+        //     sleep(100);
+        // }
+        // log_debug('done checking ui. found: ' + lastRecordsLayerIndex);
+        // yield();
+        // log_debug('initial records element vis check');
+        // yield();
+        // isRecordsElementVisible = IsSafeToCheckUI();
+        // log_debug('records element vis check, can proceed: ' + tostring(isRecordsElementVisible));
+        // yield();
+        // isRecordsElementVisible = IsSafeToCheckUI() && IsRecordElementVisible();
+        // yield();
+        // log_debug('records visible: ' + tostring(isRecordsElementVisible));
+        // yield();
 
-        while (!SHUTDOWN) {
-            yield();
-            if (GetApp().RootMap is null || GetApp().RootMap.EdChallengeId != uid) break;
-            isRecordsElementVisible = IsSafeToCheckUI() && IsRecordElementVisible();
-        }
-        log_debug('exited');
+        // while (!SHUTDOWN) {
+        //     yield();
+        //     if (GetApp().RootMap is null || GetApp().RootMap.EdChallengeId != uid) break;
+        //     isRecordsElementVisible = IsSafeToCheckUI() && IsRecordElementVisible();
+        // }
+        // log_debug('exited');
     }
 
-    float slideFrameProgress = 1.0;
+    // float slideFrameProgress = 1.0;
 
     private bool openedExploreNod = false;
-    private CGameManialinkControl@ slideFrame = null;
-    private CGameManialinkFrame@ Race_Record_Frame = null;
-    private CGameManialinkFrame@ rankingsFrame = null;
-    private CGameManialinkFrame@ hidePbFrame = null;
-    private CGameManialinkFrame@ frameNoRecords = null;
-    bool backToRaceFromGhostVisible = false;
-    vec2 mainFrameAbsPos;
-    float mainFrameAbsScale;
+    // private CGameManialinkControl@ slideFrame = null;
+    // private CGameManialinkFrame@ Race_Record_Frame = null;
+    // private CGameManialinkFrame@ rankingsFrame = null;
+    // private CGameManialinkFrame@ hidePbFrame = null;
+    // private CGameManialinkFrame@ frameNoRecords = null;
+    // bool backToRaceFromGhostVisible = false;
+    // vec2 mainFrameAbsPos;
+    // float mainFrameAbsScale;
     uint nbRecordsShown = 0;
 
-    private bool IsRecordElementVisible() {
-        auto cmap = GetApp().Network.ClientManiaAppPlayground;
-        if (cmap is null) return false;
-        if (slideFrame is null || Race_Record_Frame is null) {
-            if (lastRecordsLayerIndex >= cmap.UILayers.Length) return false;
-            auto layer = cmap.UILayers[lastRecordsLayerIndex];
-            if (layer is null) return false;
-            auto frame = cast<CGameManialinkFrame>(layer.LocalPage.GetFirstChild("frame-records"));
-            if (frame is null) return false;
-            @Race_Record_Frame = cast<CGameManialinkFrame>(frame.Parent);
-            if (Race_Record_Frame is null) return false;
-            // should always be visible
-            if (frame is null || !frame.Visible) return false;
-            if (!Race_Record_Frame.Visible) return false;
-            if (!ParentsNullOrVisible(Race_Record_Frame, 3)) return false;
-            // if (!openedExploreNod) {
-            //     openedExploreNod = true;
-            //     ExploreNod(frame);
-            // }
-            if (frame.Controls.Length < 2) return false;
-            @slideFrame = frame.Controls[1];
-            if (slideFrame.ControlId != "frame-slide") throw("should be slide-frame");
-            @rankingsFrame = cast<CGameManialinkFrame>(Race_Record_Frame.GetFirstChild("frame-ranking"));
-            @hidePbFrame = cast<CGameManialinkFrame>(Race_Record_Frame.GetFirstChild("frame-toggle-pb"));
-            @frameNoRecords = cast<CGameManialinkFrame>(Race_Record_Frame.GetFirstChild("frame-no-records"));
-            auto backBtn = Race_Record_Frame.GetFirstChild("button-back-to-race");
-            backToRaceFromGhostVisible = backBtn !is null && backBtn.Visible;
-        }
-        if (Race_Record_Frame !is null && !Race_Record_Frame.Visible) return false;
-        if (slideFrame.Parent !is null && !slideFrame.Parent.Visible) return false;
+    // private bool IsRecordElementVisible() {
+        // if (mlDetector is null) return false;
+        // nbRecordsShown = mlDetector.nbRecordsShown;
+        // return mlDetector.IsElementVisible();
 
-        if (rankingsFrame !is null) {
-            nbRecordsShown = 0;
-            for (uint i = 0; i < rankingsFrame.Controls.Length; i++) {
-                auto item = rankingsFrame.Controls[i];
-                if (item.Visible) nbRecordsShown++;
-            }
-            if (hidePbFrame !is null && hidePbFrame.Visible) {
-                nbRecordsShown++;
-            }
-            if (frameNoRecords !is null && frameNoRecords.Visible) {
-                nbRecordsShown++;
-            }
-        }
+        // auto network = GetApp().Network;
+        // auto cmap = network.ClientManiaAppPlayground;
+        // auto si = cast<CTrackManiaNetworkServerInfo>(network.ServerInfo);
+        // // bool isCotdQuali = si.ClientUIRootModuleUrl.EndsWith("COTDQualifications.Script.txt");
+        // // bool isNormalRecords = !isCotdQuali;
 
-        mainFrameAbsPos = Race_Record_Frame.AbsolutePosition_V3;
-        mainFrameAbsScale = Race_Record_Frame.AbsoluteScale;
-        // if the abs scale is too low (or negative) it causes problems. no legit case is like this so just set to 1
-        if (mainFrameAbsScale <= 0.05) mainFrameAbsScale = 1.0;
-        slideFrameProgress = (slideFrame.RelativePosition_V3.x + 61.0) / 61.0;
-        return slideFrameProgress > 0.0;
-    }
+        // if (cmap is null) return false;
 
-    private uint lastRecordsLayerIndex = 14;
-    private bool FindUIElements() {
-        auto app = cast<CTrackMania>(GetApp());
-        auto cmap = app.Network.ClientManiaAppPlayground;
-        if (cmap is null) throw('should never be null');
-        auto nbLayers = cmap.UILayers.Length;
-        log_debug('nb layers: ' + nbLayers);
-        bool foundRecordsLayer = lastRecordsLayerIndex < nbLayers
-            && IsUILayerRecordLayer(cmap.UILayers[lastRecordsLayerIndex]);
-        log_debug('did not find records layer with init check');
-        if (!foundRecordsLayer) {
-            // don't check very early layers -- might sometimes crash the game?
-            for (uint i = 3; i < nbLayers; i++) {
-                log_debug('checking layer: ' + i);
-                if (IsUILayerRecordLayer(cmap.UILayers[i])) {
-                    lastRecordsLayerIndex = i;
-                    foundRecordsLayer = true;
-                    break;
-                }
-            }
-        }
-        return foundRecordsLayer;
-    }
+        // if (slideFrame is null || Race_Record_Frame is null) {
+        //     if (lastRecordsLayerIndex >= cmap.UILayers.Length) return false;
+        //     auto layer = cmap.UILayers[lastRecordsLayerIndex];
+        //     if (layer is null) return false;
+        //     auto frame = cast<CGameManialinkFrame>(layer.LocalPage.GetFirstChild("frame-records"));
+        //     if (frame is null) return false;
+        //     @Race_Record_Frame = cast<CGameManialinkFrame>(frame.Parent);
+        //     if (Race_Record_Frame is null) return false;
+        //     // should always be visible
+        //     if (frame is null || !frame.Visible) return false;
+        //     if (!Race_Record_Frame.Visible) return false;
+        //     if (!ParentsNullOrVisible(Race_Record_Frame, 3)) return false;
+        //     // if (!openedExploreNod) {
+        //     //     openedExploreNod = true;
+        //     //     ExploreNod(frame);
+        //     // }
+        //     if (frame.Controls.Length < 2) return false;
+        //     @slideFrame = frame.Controls[1];
+        //     if (slideFrame.ControlId != "frame-slide") throw("should be slide-frame");
+        //     @rankingsFrame = cast<CGameManialinkFrame>(Race_Record_Frame.GetFirstChild("frame-ranking"));
+        //     @hidePbFrame = cast<CGameManialinkFrame>(Race_Record_Frame.GetFirstChild("frame-toggle-pb"));
+        //     @frameNoRecords = cast<CGameManialinkFrame>(Race_Record_Frame.GetFirstChild("frame-no-records"));
+        //     auto backBtn = Race_Record_Frame.GetFirstChild("button-back-to-race");
+        //     backToRaceFromGhostVisible = backBtn !is null && backBtn.Visible;
+        // }
 
-    bool IsUILayerRecordLayer(CGameUILayer@ layer) {
-        log_debug('checking layer');
-        if (layer is null) return false;
-        log_debug('checking layer ML length');
-        // when ManialinkPage length is zero, accessing stuff might crash the game (specifically, ManialinkPageUtf8)
-        if (layer.ManialinkPage.Length == 0) return false;
-        log_debug('checking layer ML');
-        // accessing ManialinkPageUtf8 in some cases might crash the game
-        if (layer.ManialinkPage.Length < 10) return false;
-        return string(layer.ManialinkPage.SubStr(0, 127)).Trim().StartsWith('<manialink name="UIModule_Race_Record"');
-    }
+        // if (Race_Record_Frame !is null && !Race_Record_Frame.Visible) return false;
+        // if (slideFrame.Parent !is null && !slideFrame.Parent.Visible) return false;
 
-    bool IsSafeToCheckUI() {
-        auto app = GetApp();
-        if (app.RootMap is null || app.CurrentPlayground is null || app.Editor !is null) return false;
-        if (!IsUIPopulated()) return false;
-        return true;
-    }
-}
+        // if (rankingsFrame !is null) {
+        //     nbRecordsShown = 0;
+        //     for (uint i = 0; i < rankingsFrame.Controls.Length; i++) {
+        //         auto item = rankingsFrame.Controls[i];
+        //         if (item.Visible) nbRecordsShown++;
+        //     }
+        //     if (hidePbFrame !is null && hidePbFrame.Visible) {
+        //         nbRecordsShown++;
+        //     }
+        //     if (frameNoRecords !is null && frameNoRecords.Visible) {
+        //         nbRecordsShown++;
+        //     }
+        // }
 
+        // mainFrameAbsPos = Race_Record_Frame.AbsolutePosition_V3;
+        // // scale customized by some dedicated servers
+        // mainFrameAbsScale = Race_Record_Frame.AbsoluteScale;
+        // // if the abs scale is too low (or negative) it causes problems. no legit case is like this so just set to 1
+        // if (mainFrameAbsScale <= 0.05) mainFrameAbsScale = 1.0;
+        // slideFrameProgress = (slideFrame.RelativePosition_V3.x + 61.0) / 61.0;
+        // return slideFrameProgress > 0.0;
+    // }
 
-bool ParentsNullOrVisible(CGameManialinkControl@ el, uint nbParentsToCheck = 1) {
-    if (nbParentsToCheck == 0) return true;
-    if (el is null || el.Parent is null) return true;
-    if (!el.Parent.Visible) return false;
-    return ParentsNullOrVisible(el.Parent, nbParentsToCheck - 1);
+    // private uint lastRecordsLayerIndex = 14;
+    // private bool FindUIElements() {
+    //     auto app = cast<CTrackMania>(GetApp());
+    //     auto cmap = app.Network.ClientManiaAppPlayground;
+    //     if (cmap is null) throw('should never be null');
+    //     auto nbLayers = cmap.UILayers.Length;
+    //     log_debug('nb layers: ' + nbLayers);
+    //     bool foundRecordsLayer = lastRecordsLayerIndex < nbLayers
+    //         && IsUILayerRecordLayer(cmap.UILayers[lastRecordsLayerIndex]);
+    //     log_debug('did not find records layer with init check');
+    //     if (!foundRecordsLayer) {
+    //         // don't check very early layers -- might sometimes crash the game?
+    //         for (uint i = 3; i < nbLayers; i++) {
+    //             log_debug('checking layer: ' + i);
+    //             if (IsUILayerRecordLayer(cmap.UILayers[i])) {
+    //                 lastRecordsLayerIndex = i;
+    //                 foundRecordsLayer = true;
+    //                 break;
+    //             }
+    //         }
+    //     }
+    //     return foundRecordsLayer;
+    // }
+
+    // bool IsUILayerRecordLayer(CGameUILayer@ layer) {
+    //     log_debug('checking layer');
+    //     if (layer is null) return false;
+    //     log_debug('checking layer ML length');
+    //     // when ManialinkPage length is zero, accessing stuff might crash the game (specifically, ManialinkPageUtf8)
+    //     if (layer.ManialinkPage.Length == 0) return false;
+    //     log_debug('checking layer ML');
+    //     // accessing ManialinkPageUtf8 in some cases might crash the game
+    //     if (layer.ManialinkPage.Length < 10) return false;
+    //     return string(layer.ManialinkPage.SubStr(0, 127)).Trim().StartsWith('<manialink name="UIModule_Race_Record"');
+    // }
+
+    // bool IsSafeToCheckUI() {
+    //     auto app = GetApp();
+    //     if (app.RootMap is null || app.CurrentPlayground is null) return false;
+    //     // || app.Editor !is null) return false;
+    //     return IsUIPopulated();
+    // }
 }
 
 
@@ -699,6 +712,7 @@ class MapInfo_UI : MapInfo_Data {
     vec2 baseRes = vec2(2560.0, 1440.0);
     float heightProp = 64.0 / baseRes.y;
     float fullWidthProp = 400.0 / baseRes.y;
+    // float fullWidthProp = 428.0 / baseRes.y;
     float fontProp = 40.0 / baseRes.y;
     float xPaddingProp = 20.0 / baseRes.y;
     float gapProp = 8.0 / baseRes.y;
@@ -728,8 +742,11 @@ class MapInfo_UI : MapInfo_Data {
         // if we are <16:9 res, then we get squished width
         float screenScale = screen.y / baseRes.y;
         widthSquish = Math::Min(1., screen.x / (baseRes.x * screenScale));
+        auto mainFrameAbsPos = mlDetector.mainFrameAbsPos;
+        auto mainFrameAbsScale = mlDetector.mainFrameAbsScale;
 
         recordsTL = (mainFrameAbsPos * vec2(widthSquish, -1)) / 180 * (screen.y) + midPoint;
+        fullWidthProp = mlDetector.fullWidthPxOnBaseRes / baseRes.y;
         // recordsFullSize = vec2(fullWidthProp * mainFrameAbsScale * screen.y, 200);
 
         vec2 tr = recordsTL + vec2(fullWidthProp * screen.y * mainFrameAbsScale, 0);
@@ -748,11 +765,13 @@ class MapInfo_UI : MapInfo_Data {
         // todo: check all error cases: frame-standard-required, frame-map-not-available, frame-missing-privilege
 
         auto mlScale = heightProp / 8.;
-        float recsShown = nbRecordsShown;
-        if (UploadedToNadeo == 0) {
-            recsShown = 3.0;
-        }
-        recordsGuessedHeight = (6. * (recsShown + 2)) * mlScale;
+        recordsGuessedHeight = mlDetector.GuessHeight(this) * mlScale;
+        nbRecordsShown = mlDetector.nbRecordsShown;
+        // float recsShown = mlDetector.nbRecordsShown;
+        // if (UploadedToNadeo == 0) {
+        //     recsShown = 3.0;
+        // }
+        //(6. * (recsShown + 2)) * mlScale;
 
         return bounds;
     }
@@ -774,22 +793,22 @@ class MapInfo_UI : MapInfo_Data {
             || !ShouldDrawUI
             || cmap is null || !IsGoodUISequence(cmap.UI.UISequence)
             || pgcsa is null || pgcsa.IsInGameMenuDisplayed
-            || (ps !is null && ps.StartTime > 2147483000)
+            // || (ps !is null && ps.StartTime > 2147483000)
             ;
         if (closed) {
             lastMapInfoSize = vec2();
         }
-        if (!mainAnim.Update(!closed, slideFrameProgress)) return;
+        if (!mainAnim.Update(!closed, mlDetector.slideProgress)) return;
 
         auto rect = UpdateBounds();
 
-        float fs = fontProp * screen.y * mainFrameAbsScale;
-        xPad = xPaddingProp * screen.y; // * mainFrameAbsScale
-        float gap = gapProp * screen.y * mainFrameAbsScale;
-        float guessedHeightPx = recordsGuessedHeight * screen.y * mainFrameAbsScale;
+        float fs = fontProp * screen.y * mlDetector.mainFrameAbsScale;
+        xPad = xPaddingProp * screen.y; // * mlDetector.mainFrameAbsScale
+        float gap = gapProp * screen.y * mlDetector.mainFrameAbsScale;
+        float guessedHeightPx = recordsGuessedHeight * screen.y * mlDetector.mainFrameAbsScale;
 
         // check max size assuming refresh-leadersboards exists
-        float recordsWidth = fullWidthProp * screen.y * mainFrameAbsScale;
+        float recordsWidth = fullWidthProp * screen.y * mlDetector.mainFrameAbsScale;
         float maxTextSize = recordsWidth - (rect.w + gap + xPad) * 2.0;
         // if this is happening something is not right
         if (maxTextSize <= 0) return;
@@ -813,7 +832,7 @@ class MapInfo_UI : MapInfo_Data {
             textSize.x = maxTextSize;
         }
 
-        float width = xPad * 2.0 + textSize.x * mainFrameAbsScale;
+        float width = xPad * 2.0 + textSize.x * mlDetector.mainFrameAbsScale;
         rect.x -= width;
         rect.z = width;
         float textHOffset = rect.w * .55 - textSize.y / 2.0;
@@ -865,6 +884,7 @@ class MapInfo_UI : MapInfo_Data {
         auxInfoRect = vec4(rect.x + rect.z - recordsWidth, rect.y + guessedHeightPx + gap * 2 + rect.w, recordsWidth, rect.w * hScale);
         bool drawTmxId = S_DrawTMXBelowRecords && UploadedToTMX == 1;
         if (drawTmxId) {
+            // todo: can't exactly remember what this was doing
             extraHeightBelowRecords += nbRecordsShown >= 8 ? (auxInfoRect.w * (nbRecordsShown - 8) + auxInfoRect.w + gap) : 0;
             Draw_TMXBelowRecords(auxInfoRect);
         }
@@ -896,7 +916,7 @@ class MapInfo_UI : MapInfo_Data {
             || IsWithin(g_MouseCoords, rect.xy * hoverScale + vec2(rect.z * widthSquish + gap, -topAuxInfoRect.w), lastMapInfoSize)
             || IsWithin(g_MouseCoords, topAuxInfoRect.xy * hoverScale, topAuxInfoRect.zw)
             ;
-        if (hoverAnim.Update(!closed && rawHover, slideFrameProgress)) {
+        if (hoverAnim.Update(!closed && rawHover, mlDetector.slideProgress)) {
             DrawHoveredInterface(rect, fs, textHOffset, gap);
         } else {
             lastMapInfoSize = vec2();
