@@ -89,6 +89,8 @@ class MapInfo_Data : MapInfo::Data {
         if (map is null) throw("Cannot instantiate MapInfo_Data when RootMap is null.");
         uid = map.EdChallengeId;
         SetName(map.MapName);
+        MapComment = map.Comments;
+        HasMapComment = MapComment.Length > 0;
         author = map.AuthorNickName;
         AuthorDisplayName = map.MapInfo.AuthorNickName;
         AuthorCountryFlag = map.AuthorZoneIconUrl.SubStr(map.AuthorZoneIconUrl.Length - 7);
@@ -1368,24 +1370,16 @@ class MapInfo_UI : MapInfo_Data {
                 if (SP_ShowTotDDate)  PersistentTableRowStr("TotD", TOTDStr);
                 if (SP_ShowNbPlayers) PersistentTableRowStr("Players", NbPlayersStr);
                 if (SP_ShowWorstTime) PersistentTableRowStr("Worst Time", WorstTimeStr);
+                if (SP_ShowTMXDojo) PersistentTableRowStr("TMX ID", TrackIDStr);
+                if (SP_ShowMapComment) PersistentTableRowStr("Map Comment", MapComment);
 
-                if (SP_ShowTMXDojo) {
-                    UI::PushID("tmxID");
-
-                    UI::TableNextRow();
-                    UI::TableNextColumn();
-                    UI::Text("TMX Map ID");
-                    UI::TableNextColumn();
-                    UI::Text(TrackIDStr);
-
-                    if (UI::Button("TM.IO")) OnClickTMioButton();
-                    UI::SameLine();
-                    if (UI::Button("TMX")) OnClickTmxButton();
-                    UI::SameLine();
-                    if (UI::Button("TMDojo")) OnClickTMDojoButton();
-
-                    UI::PopID();
-                }
+                if (UI::Button("TM.IO##pw")) OnClickTMioButton();
+                UI::SameLine();
+                UI::BeginDisabled(TrackID <= 0);
+                if (UI::Button("TMX##pw")) OnClickTmxButton();
+                UI::SameLine();
+                UI::EndDisabled();
+                if (UI::Button("TMDojo##pw")) OnClickTMDojoButton();
 
                 UI::EndTable();
             }
@@ -1400,7 +1394,7 @@ class MapInfo_UI : MapInfo_Data {
         UI::TableNextColumn();
         UI::Text(key);
         UI::TableNextColumn();
-        UI::Text(value);
+        UI::TextWrapped(value);
 
         UI::PopID();
     }
@@ -1423,6 +1417,7 @@ class MapInfo_UI : MapInfo_Data {
                 DebugTableRowStr("RawName", RawName);
                 DebugTableRowStr("CleanName", CleanName);
                 DebugTableRowStr("NvgName", NvgName.ToString());
+                DebugTableRowStr("MapComment", MapComment);
 
                 DebugTableRowStr("AuthorAccountId", AuthorAccountId);
                 DebugTableRowStr("AuthorDisplayName", AuthorDisplayName);

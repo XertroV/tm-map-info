@@ -81,6 +81,9 @@ float S_LoadingScreenYOffsetPct = 8.0;
 [Setting category="Side Panel" name="Show author flags"]
 bool S_ShowAuthorFlags = true;
 
+// [Setting category="Side Panel" name="Show map comment"]
+// bool S_ShowMapComment = true;
+
 
 #if DEPENDENCY_MANIAEXCHANGE
 [Setting category="Integrations" name="Open TMX Links in the ManiaExchange plugin?"]
@@ -106,3 +109,6 @@ bool SP_ShowWorstTime = true;
 
 [Setting category="Persistent Window" name="Show TMX/Dojo ID"]
 bool SP_ShowTMXDojo = true;
+
+[Setting category="Persistent Window" name="Show Map Comment"]
+bool SP_ShowMapComment = true;

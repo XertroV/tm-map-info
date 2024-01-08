@@ -7,6 +7,8 @@ namespace MapInfo {
         string RawName;
         // Without format codes
         string CleanName;
+        string MapComment;
+        bool HasMapComment;
 
         string AuthorAccountId = "";
         string AuthorDisplayName = "";
