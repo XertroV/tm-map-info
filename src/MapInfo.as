@@ -217,6 +217,8 @@ class MapInfo_Data : MapInfo::Data {
         // todo: check this works fine in most cases
         // see issue #20 for example of why this should be commented.
 
+        AuthorCurrentName = NadeoServices::GetDisplayNameAsync(AuthorAccountId);
+
         SetName(info.Name);
         FileName = info.FileName;
         FileUrl = info.FileUrl;
@@ -1104,7 +1106,7 @@ class MapInfo_UI : MapInfo_Data {
         }
         if (drawAuthor) {
             nvg::FillColor(vec4(.5, .5, .5, 1));
-            nvg::Text(drawBoth ? midPointLower : midPoint, "by " + AuthorDisplayName);
+            nvg::Text(drawBoth ? midPointLower : midPoint, "by " + (S_AuthorCurrentName && AuthorCurrentName.Length > 0 ? AuthorCurrentName : AuthorDisplayName));
         }
 
         nvg::ResetScissor();
@@ -1116,7 +1118,7 @@ class MapInfo_UI : MapInfo_Data {
 
         string[] lines;
         lines.InsertLast(g_MapInfo.Name);
-        lines.InsertLast("by " + ColoredString(g_MapInfo.AuthorDisplayName));
+        lines.InsertLast("by " + ColoredString(S_AuthorCurrentName && g_MapInfo.AuthorCurrentName.Length > 0 ? g_MapInfo.AuthorCurrentName : g_MapInfo.AuthorDisplayName));
         lines.InsertLast("");
         lines.InsertLast("Published: " + g_MapInfo.DateStr);
         if (TOTDStr.Length > 0)
