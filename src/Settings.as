@@ -1,7 +1,7 @@
 [Setting hidden]
 bool S_ShowMapInfo = true;
 
-[Setting category="General" name="Retrieve current author's username"]
+[Setting category="General" name="Retrieve author's current username"]
 bool S_AuthorCurrentName = true;
 
 enum ShowTimeSetting {
