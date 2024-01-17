@@ -217,7 +217,8 @@ class MapInfo_Data : MapInfo::Data {
         // todo: check this works fine in most cases
         // see issue #20 for example of why this should be commented.
 
-        AuthorCurrentName = NadeoServices::GetDisplayNameAsync(AuthorAccountId);
+        if (AuthorDisplayName != "Nadeo")
+            AuthorCurrentName = NadeoServices::GetDisplayNameAsync(AuthorAccountId);
 
         SetName(info.Name);
         FileName = info.FileName;
