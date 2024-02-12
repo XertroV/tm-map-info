@@ -64,6 +64,12 @@ Without format codes
 
 #### TMXAuthorID -- `int TMXAuthorID`
 
+#### TMXAwards -- `uint TMXAwards`
+
+#### TMXAwardsStr -- `string TMXAwardsStr`
+
+#### TMXMapTags -- `string TMXMapTags`
+
 #### TMX_Info -- `Json::Value@ TMX_Info`
 
 When `null`, there's no TMX info. It should never be Json::Type::Null.

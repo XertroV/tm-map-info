@@ -390,6 +390,19 @@ class MapInfo_Data : MapInfo::Data {
             TMXAuthorID = int(tmxTrack.Get('UserID', -1));
             TrackID = int(tmxTrack.Get('TrackID', -1));
             TrackIDStr = tostring(TrackID);
+            TMXAwards = int(tmxTrack.Get('AwardCount', -1));
+            TMXAwardsStr = tostring(TMXAwards);
+
+            string[]@ TMXMapTagIDs = string(tmxTrack.Get('Tags', -1)).Split(",");
+            if(!TMXMapTagIDs.IsEmpty()) {
+                string mapTag = string(TMX::mapTags[TMXMapTagIDs[0]]);
+                TMXMapTags = mapTag;
+                for(uint i = 1; i < TMXMapTagIDs.Length; i++) {
+                    mapTag = string(TMX::mapTags[TMXMapTagIDs[i]]);
+                    TMXMapTags += ", " + mapTag;
+                }
+            }
+
             @TMX_Info = tmxTrack;
             @TMXButton = NvgButton(vec4(1, 1, 1, .8), vec4(0, 0, 0, 1), CoroutineFunc(this.OnClickTmxButton));
             @TMXAuthorButton = NvgButton(vec4(1, 1, 1, .8), vec4(0, 0, 0, 1), CoroutineFunc(this.OnClickTmxAuthorButton));
@@ -1119,6 +1132,12 @@ class MapInfo_UI : MapInfo_Data {
         lines.InsertLast("by " + ColoredString(g_MapInfo.AuthorDisplayName));
         lines.InsertLast("");
         lines.InsertLast("Published: " + g_MapInfo.DateStr);
+
+        if (SP_ShowTMXAwards)
+            lines.InsertLast("Awards: " + TMXAwards);
+        if (SP_ShowTMXMapTags)
+            lines.InsertLast("Tags: " + TMXMapTags);
+
         if (TOTDStr.Length > 0)
             lines.InsertLast("TOTD: " + TOTDStr);
         lines.InsertLast("# Finishes: " + NbPlayersStr);
@@ -1246,6 +1265,10 @@ class MapInfo_UI : MapInfo_Data {
         // pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Author WSID", AuthorWebServicesUserId);
         // pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Author AcctID", AuthorAccountId);
         pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Published", DateStr, null, 1.0, TMioButton, tmIOLogo);
+        if (SP_ShowTMXAwards)
+            pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, Icons::Trophy + " Awards", TMXAwardsStr, TMXAwardsStr, alpha);
+        if (SP_ShowTMXMapTags)
+            pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Tags", TMXMapTags, TMXMapTags, alpha);
         if (drawTotd)
             pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "TOTD", TOTDStr);
         pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "# Finishes", NbPlayersStr + " (" + TodaysDate + ")");
@@ -1366,11 +1389,13 @@ class MapInfo_UI : MapInfo_Data {
                 UI::TableSetupColumn("key", UI::TableColumnFlags::WidthFixed);
                 UI::TableSetupColumn("value", UI::TableColumnFlags::WidthStretch);
 
-                if (SP_ShowPubDate)   PersistentTableRowStr("Published", DateStr);
-                if (SP_ShowTotDDate)  PersistentTableRowStr("TotD", TOTDStr);
-                if (SP_ShowNbPlayers) PersistentTableRowStr("Players", NbPlayersStr);
-                if (SP_ShowWorstTime) PersistentTableRowStr("Worst Time", WorstTimeStr);
-                if (SP_ShowTMXDojo) PersistentTableRowStr("TMX ID", TrackIDStr);
+                if (SP_ShowPubDate)    PersistentTableRowStr("Published", DateStr);
+                if (SP_ShowTotDDate)   PersistentTableRowStr("TotD", TOTDStr);
+                if (SP_ShowNbPlayers)  PersistentTableRowStr("Players", NbPlayersStr);
+                if (SP_ShowWorstTime)  PersistentTableRowStr("Worst Time", WorstTimeStr);
+                if (SP_ShowTMXDojo)    PersistentTableRowStr("TMX ID", TrackIDStr);
+                if (SP_ShowTMXAwards)  PersistentTableRowStr("TMX Awards", TMXAwardsStr);
+                if (SP_ShowTMXMapTags) PersistentTableRowStr("TMX Tags", TMXMapTags);
                 if (SP_ShowMapComment) PersistentTableRowStr("Map Comment", MapComment);
 
                 if (UI::Button("TM.IO##pw")) OnClickTMioButton();
@@ -1443,6 +1468,10 @@ class MapInfo_UI : MapInfo_Data {
                 DebugTableRowInt("TMXAuthorID", TMXAuthorID);
                 DebugTableRowInt("TrackID", TrackID);
                 DebugTableRowStr("TrackIDStr", TrackIDStr);
+
+                DebugTableRowInt("TMXAwards", TMXAwards);
+                DebugTableRowStr("TMXAwardsStr", TMXAwardsStr);
+                DebugTableRowStr("TMXMapTags", TMXMapTags);
 
                 DebugTableRowStr("TMX API URL", TMX::getMapByUidEndpoint.Replace('{id}', uid));
                 DebugTableRowJsonValueHandle("TMX_Info", TMX_Info);

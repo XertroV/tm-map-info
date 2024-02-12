@@ -1,5 +1,7 @@
 namespace TMX {
+    dictionary@ mapTags = dictionary();
     const string getMapByUidEndpoint = "https://trackmania.exchange/api/maps/get_map_info/uid/{id}";
+    const string getTagsEndpoint = "https://trackmania.exchange/api/tags/gettags";
 
     // <https://api2.mania.exchange/Method/Index/37>
     Json::Value@ GetMapFromUid(const string &in uid) {
@@ -37,5 +39,23 @@ namespace TMX {
         } catch {}
 #endif
         OpenBrowserURL("https://trackmania.exchange/user/profile/" + TMXAuthorID);
+    }
+
+    void LoadMapTags() {
+        auto req = PluginGetRequest(getTagsEndpoint);
+        req.Start();
+        while (!req.Finished()) yield();
+        if (req.ResponseCode() >= 400 || req.ResponseCode() < 200 || req.Error().Length > 0) {
+            log_warn("[status:" + req.ResponseCode() + "] Error getting Map Tags from TMX: " + req.Error());
+            return;
+        }
+
+        Json::Value@ jsonMapTags = Json::Parse(req.String());
+
+        for(uint i = 0; i < jsonMapTags.Length; i++) {
+            string id = tostring(int(jsonMapTags[i]['ID']));
+            string name = jsonMapTags[i]['Name'];
+            mapTags.Set(id, name);
+        }
     }
 }

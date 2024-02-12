@@ -14,6 +14,7 @@ void Main() {
     startnew(TOTD::LoadTOTDs);
     startnew(MonitorUIVisible);
     startnew(CacheTodaysDate);
+    startnew(TMX::LoadMapTags);
 }
 
 void LoadImGUIFont() {
