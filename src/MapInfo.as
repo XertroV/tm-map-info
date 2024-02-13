@@ -543,165 +543,22 @@ class MapInfo_Data : MapInfo::Data {
     // private bool isRecordsElementVisible = false;
     private void MonitorRecordsVisibility() {
         mlDetector.MonitorVisibility(this);
-        // // these traces are to help investigate crashes -- can be commented later for production (or we could make a loglevel thing so ppl can turn them back on if they get crashes)
-        // log_debug('test populated');
-        // while (!IsUIPopulated()) yield();
-        // log_debug('test safe');
-        // if (!mlIsSafeToCheckUI()) {
-        //     log_warn("unexpectedly failed UI safety check. probably in the editor or something.");
-        //     return;
-        // }
-        // log_debug('is safe');
-        // // once we detect things have started to load, wait another second
-        // log_debug('sleep');
-        // for (uint i = 0; i < 10; i++) yield();
-        // log_debug('assert safe');
-        // yield();
-        // while (!IsSafeToCheckUI()) yield(); // throw("Should only happen if we exit the map super fast.");
-        // log_debug('find UI elements');
-        // while (IsSafeToCheckUI() && !FindUIElements()) {
-        //     sleep(100);
-        // }
-        // log_debug('done checking ui. found: ' + lastRecordsLayerIndex);
-        // yield();
-        // log_debug('initial records element vis check');
-        // yield();
-        // isRecordsElementVisible = IsSafeToCheckUI();
-        // log_debug('records element vis check, can proceed: ' + tostring(isRecordsElementVisible));
-        // yield();
-        // isRecordsElementVisible = IsSafeToCheckUI() && IsRecordElementVisible();
-        // yield();
-        // log_debug('records visible: ' + tostring(isRecordsElementVisible));
-        // yield();
-
-        // while (!SHUTDOWN) {
-        //     yield();
-        //     if (GetApp().RootMap is null || GetApp().RootMap.EdChallengeId != uid) break;
-        //     isRecordsElementVisible = IsSafeToCheckUI() && IsRecordElementVisible();
-        // }
-        // log_debug('exited');
     }
 
-    // float slideFrameProgress = 1.0;
-
     private bool openedExploreNod = false;
-    // private CGameManialinkControl@ slideFrame = null;
-    // private CGameManialinkFrame@ Race_Record_Frame = null;
-    // private CGameManialinkFrame@ rankingsFrame = null;
-    // private CGameManialinkFrame@ hidePbFrame = null;
-    // private CGameManialinkFrame@ frameNoRecords = null;
-    // bool backToRaceFromGhostVisible = false;
-    // vec2 mainFrameAbsPos;
-    // float mainFrameAbsScale;
     uint nbRecordsShown = 0;
 
-    // private bool IsRecordElementVisible() {
-        // if (mlDetector is null) return false;
-        // nbRecordsShown = mlDetector.nbRecordsShown;
-        // return mlDetector.IsElementVisible();
+    bool ShouldDrawTMXAwards {
+        get {
+            return SP_ShowTMXAwards && UploadedToTMX == 1 && TMXAwards >= 0;
+        }
+    }
 
-        // auto network = GetApp().Network;
-        // auto cmap = network.ClientManiaAppPlayground;
-        // auto si = cast<CTrackManiaNetworkServerInfo>(network.ServerInfo);
-        // // bool isCotdQuali = si.ClientUIRootModuleUrl.EndsWith("COTDQualifications.Script.txt");
-        // // bool isNormalRecords = !isCotdQuali;
-
-        // if (cmap is null) return false;
-
-        // if (slideFrame is null || Race_Record_Frame is null) {
-        //     if (lastRecordsLayerIndex >= cmap.UILayers.Length) return false;
-        //     auto layer = cmap.UILayers[lastRecordsLayerIndex];
-        //     if (layer is null) return false;
-        //     auto frame = cast<CGameManialinkFrame>(layer.LocalPage.GetFirstChild("frame-records"));
-        //     if (frame is null) return false;
-        //     @Race_Record_Frame = cast<CGameManialinkFrame>(frame.Parent);
-        //     if (Race_Record_Frame is null) return false;
-        //     // should always be visible
-        //     if (frame is null || !frame.Visible) return false;
-        //     if (!Race_Record_Frame.Visible) return false;
-        //     if (!ParentsNullOrVisible(Race_Record_Frame, 3)) return false;
-        //     // if (!openedExploreNod) {
-        //     //     openedExploreNod = true;
-        //     //     ExploreNod(frame);
-        //     // }
-        //     if (frame.Controls.Length < 2) return false;
-        //     @slideFrame = frame.Controls[1];
-        //     if (slideFrame.ControlId != "frame-slide") throw("should be slide-frame");
-        //     @rankingsFrame = cast<CGameManialinkFrame>(Race_Record_Frame.GetFirstChild("frame-ranking"));
-        //     @hidePbFrame = cast<CGameManialinkFrame>(Race_Record_Frame.GetFirstChild("frame-toggle-pb"));
-        //     @frameNoRecords = cast<CGameManialinkFrame>(Race_Record_Frame.GetFirstChild("frame-no-records"));
-        //     auto backBtn = Race_Record_Frame.GetFirstChild("button-back-to-race");
-        //     backToRaceFromGhostVisible = backBtn !is null && backBtn.Visible;
-        // }
-
-        // if (Race_Record_Frame !is null && !Race_Record_Frame.Visible) return false;
-        // if (slideFrame.Parent !is null && !slideFrame.Parent.Visible) return false;
-
-        // if (rankingsFrame !is null) {
-        //     nbRecordsShown = 0;
-        //     for (uint i = 0; i < rankingsFrame.Controls.Length; i++) {
-        //         auto item = rankingsFrame.Controls[i];
-        //         if (item.Visible) nbRecordsShown++;
-        //     }
-        //     if (hidePbFrame !is null && hidePbFrame.Visible) {
-        //         nbRecordsShown++;
-        //     }
-        //     if (frameNoRecords !is null && frameNoRecords.Visible) {
-        //         nbRecordsShown++;
-        //     }
-        // }
-
-        // mainFrameAbsPos = Race_Record_Frame.AbsolutePosition_V3;
-        // // scale customized by some dedicated servers
-        // mainFrameAbsScale = Race_Record_Frame.AbsoluteScale;
-        // // if the abs scale is too low (or negative) it causes problems. no legit case is like this so just set to 1
-        // if (mainFrameAbsScale <= 0.05) mainFrameAbsScale = 1.0;
-        // slideFrameProgress = (slideFrame.RelativePosition_V3.x + 61.0) / 61.0;
-        // return slideFrameProgress > 0.0;
-    // }
-
-    // private uint lastRecordsLayerIndex = 14;
-    // private bool FindUIElements() {
-    //     auto app = cast<CTrackMania>(GetApp());
-    //     auto cmap = app.Network.ClientManiaAppPlayground;
-    //     if (cmap is null) throw('should never be null');
-    //     auto nbLayers = cmap.UILayers.Length;
-    //     log_debug('nb layers: ' + nbLayers);
-    //     bool foundRecordsLayer = lastRecordsLayerIndex < nbLayers
-    //         && IsUILayerRecordLayer(cmap.UILayers[lastRecordsLayerIndex]);
-    //     log_debug('did not find records layer with init check');
-    //     if (!foundRecordsLayer) {
-    //         // don't check very early layers -- might sometimes crash the game?
-    //         for (uint i = 3; i < nbLayers; i++) {
-    //             log_debug('checking layer: ' + i);
-    //             if (IsUILayerRecordLayer(cmap.UILayers[i])) {
-    //                 lastRecordsLayerIndex = i;
-    //                 foundRecordsLayer = true;
-    //                 break;
-    //             }
-    //         }
-    //     }
-    //     return foundRecordsLayer;
-    // }
-
-    // bool IsUILayerRecordLayer(CGameUILayer@ layer) {
-    //     log_debug('checking layer');
-    //     if (layer is null) return false;
-    //     log_debug('checking layer ML length');
-    //     // when ManialinkPage length is zero, accessing stuff might crash the game (specifically, ManialinkPageUtf8)
-    //     if (layer.ManialinkPage.Length == 0) return false;
-    //     log_debug('checking layer ML');
-    //     // accessing ManialinkPageUtf8 in some cases might crash the game
-    //     if (layer.ManialinkPage.Length < 10) return false;
-    //     return string(layer.ManialinkPage.SubStr(0, 127)).Trim().StartsWith('<manialink name="UIModule_Race_Record"');
-    // }
-
-    // bool IsSafeToCheckUI() {
-    //     auto app = GetApp();
-    //     if (app.RootMap is null || app.CurrentPlayground is null) return false;
-    //     // || app.Editor !is null) return false;
-    //     return IsUIPopulated();
-    // }
+    bool ShouldDrawTMXTags {
+        get {
+            return SP_ShowTMXMapTags && UploadedToTMX == 1 && TMXMapTags.Length > 0;
+        }
+    }
 }
 
 
@@ -1136,11 +993,6 @@ class MapInfo_UI : MapInfo_Data {
         lines.InsertLast("");
         lines.InsertLast("Published: " + g_MapInfo.DateStr);
 
-        if (SP_ShowTMXAwards)
-            lines.InsertLast("Awards: " + TMXAwards);
-        if (SP_ShowTMXMapTags)
-            lines.InsertLast("Tags: " + TMXMapTags);
-
         if (TOTDStr.Length > 0)
             lines.InsertLast("TOTD: " + TOTDStr);
         lines.InsertLast("# Finishes: " + NbPlayersStr);
@@ -1149,6 +1001,11 @@ class MapInfo_UI : MapInfo_Data {
         else if (S_ShowWhichTime == ShowTimeSetting::Author_Time)
             lines.InsertLast("Author Time: " + AuthorTimeStr);
         lines.InsertLast("TMX: " + TrackIDStr);
+
+        if (ShouldDrawTMXAwards)
+            lines.InsertLast("TMX Awards: " + TMXAwards);
+        if (ShouldDrawTMXTags)
+            lines.InsertLast("TMX Tags: " + TMXMapTags);
 
         auto bls = Meta::GetPluginFromID("BetterLoadingScreen");
         auto sls = Meta::GetPluginFromID("static-loading-screen");
@@ -1226,10 +1083,14 @@ class MapInfo_UI : MapInfo_Data {
         nvg::Scale(widthSquish, 1);
 
         bool drawTotd = TOTDStr.Length > 0;
+        bool drawAwards = ShouldDrawTMXAwards;
+        bool drawTags = ShouldDrawTMXTags;
 
         // ! should match the number of calls to DrawDataLabels
-        int nbRows = 7;
+        int nbRows = 9;
         if (!drawTotd) nbRows--;
+        if (!drawAwards) nbRows--;
+        if (!drawTags) nbRows--;
 
         nvg::BeginPath();
 
@@ -1268,10 +1129,6 @@ class MapInfo_UI : MapInfo_Data {
         // pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Author WSID", AuthorWebServicesUserId);
         // pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Author AcctID", AuthorAccountId);
         pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Published", DateStr, null, 1.0, TMioButton, tmIOLogo);
-        if (SP_ShowTMXAwards)
-            pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, Icons::Trophy + " Awards", TMXAwardsStr, TMXAwardsStr, alpha);
-        if (SP_ShowTMXMapTags)
-            pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Tags", TMXMapTags, TMXMapTags, alpha);
         if (drawTotd)
             pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "TOTD", TOTDStr);
         pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "# Finishes", NbPlayersStr + " (" + TodaysDate + ")");
@@ -1302,6 +1159,11 @@ class MapInfo_UI : MapInfo_Data {
             DrawTexture(authorBtnPos, btnLogoSize, tmxLogo);
             authorBtnPos.x += xPad + fs;
         }
+
+        if (ShouldDrawTMXAwards)
+            pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, Icons::Trophy + " Awards", TMXAwardsStr, TMXAwardsStr, alpha);
+        if (ShouldDrawTMXTags)
+            pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Tags", TMXMapTags, TMXMapTags, alpha);
 
         /* Thumbnail*/
 
