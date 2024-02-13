@@ -11,6 +11,7 @@ namespace MapInfo {
         bool HasMapComment;
 
         string AuthorAccountId = "";
+        string AuthorCurrentName = "";
         string AuthorDisplayName = "";
         string AuthorWebServicesUserId = "";
         string AuthorCountryFlag = "";

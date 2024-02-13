@@ -217,6 +217,9 @@ class MapInfo_Data : MapInfo::Data {
         // todo: check this works fine in most cases
         // see issue #20 for example of why this should be commented.
 
+        if (AuthorDisplayName != "Nadeo")
+            AuthorCurrentName = NadeoServices::GetDisplayNameAsync(AuthorAccountId);
+
         SetName(info.Name);
         FileName = info.FileName;
         FileUrl = info.FileUrl;
@@ -1104,7 +1107,7 @@ class MapInfo_UI : MapInfo_Data {
         }
         if (drawAuthor) {
             nvg::FillColor(vec4(.5, .5, .5, 1));
-            nvg::Text(drawBoth ? midPointLower : midPoint, "by " + AuthorDisplayName);
+            nvg::Text(drawBoth ? midPointLower : midPoint, "by " + (S_AuthorCurrentName && AuthorCurrentName.Length > 0 ? AuthorCurrentName : AuthorDisplayName));
         }
 
         nvg::ResetScissor();
@@ -1116,7 +1119,7 @@ class MapInfo_UI : MapInfo_Data {
 
         string[] lines;
         lines.InsertLast(g_MapInfo.Name);
-        lines.InsertLast("by " + ColoredString(g_MapInfo.AuthorDisplayName));
+        lines.InsertLast("by " + ColoredString(S_AuthorCurrentName && g_MapInfo.AuthorCurrentName.Length > 0 ? g_MapInfo.AuthorCurrentName : g_MapInfo.AuthorDisplayName));
         lines.InsertLast("");
         lines.InsertLast("Published: " + g_MapInfo.DateStr);
         if (TOTDStr.Length > 0)
@@ -1241,7 +1244,7 @@ class MapInfo_UI : MapInfo_Data {
         pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Name", CleanName, NvgName, alpha);
         // pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Name", CleanName);
         vec2 authorBtnPos = pos.xyz.xy;
-        pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Author", AuthorDisplayName, null, 1.0, TMioAuthorButton, tmIOLogo, flagTexture);
+        pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Author", (S_AuthorCurrentName && AuthorCurrentName.Length > 0 ? AuthorCurrentName : AuthorDisplayName), null, 1.0, TMioAuthorButton, tmIOLogo, flagTexture);
         authorBtnPos += vec2(col2X + pos.w + xPad, -fs * 0.05);
         // pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Author WSID", AuthorWebServicesUserId);
         // pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Author AcctID", AuthorAccountId);
@@ -1361,7 +1364,7 @@ class MapInfo_UI : MapInfo_Data {
         if (!S_ShowPersistentUI) return;
 
         UI::SetNextWindowSize(800, 500, UI::Cond::FirstUseEver);
-        if (UI::Begin("\\$8f0" + Icons::Map + "\\$z " + Name + " \\$666by\\$z " + AuthorDisplayName + "###MapInfoPersistent", S_ShowPersistentUI, UI::WindowFlags::AlwaysAutoResize)) {
+        if (UI::Begin("\\$8f0" + Icons::Map + "\\$z " + Name + " \\$666by\\$z " + (S_AuthorCurrentName && AuthorCurrentName.Length > 0 ? AuthorCurrentName : AuthorDisplayName) + "###MapInfoPersistent", S_ShowPersistentUI, UI::WindowFlags::AlwaysAutoResize)) {
             if (UI::BeginTable("mapInfoPersistent", 2, UI::TableFlags::SizingFixedFit)) {
                 UI::TableSetupColumn("key", UI::TableColumnFlags::WidthFixed);
                 UI::TableSetupColumn("value", UI::TableColumnFlags::WidthStretch);
@@ -1420,6 +1423,7 @@ class MapInfo_UI : MapInfo_Data {
                 DebugTableRowStr("MapComment", MapComment);
 
                 DebugTableRowStr("AuthorAccountId", AuthorAccountId);
+                DebugTableRowStr("AuthorCurrentName", AuthorCurrentName);
                 DebugTableRowStr("AuthorDisplayName", AuthorDisplayName);
                 DebugTableRowStr("AuthorWebServicesUserId", AuthorWebServicesUserId);
                 DebugTableRowStr("AuthorCountryFlag", AuthorCountryFlag);
