@@ -550,13 +550,13 @@ class MapInfo_Data : MapInfo::Data {
 
     bool ShouldDrawTMXAwards {
         get {
-            return SP_ShowTMXAwards && UploadedToTMX == 1 && TMXAwards >= 0;
+            return S_ShowTMXAwards && UploadedToTMX == 1 && TMXAwards >= 0;
         }
     }
 
     bool ShouldDrawTMXTags {
         get {
-            return SP_ShowTMXMapTags && UploadedToTMX == 1 && TMXMapTags.Length > 0;
+            return S_ShowTMXMapTags && UploadedToTMX == 1 && TMXMapTags.Length > 0;
         }
     }
 }

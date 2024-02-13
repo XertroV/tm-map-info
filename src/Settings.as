@@ -23,6 +23,12 @@ AboveRecChoice S_DrawTitleAuthorAboveRecords = AboveRecChoice::Both;
 [Setting category="General" name="Show TMX Track ID below records if it exists"]
 bool S_DrawTMXBelowRecords = true;
 
+[Setting category="General" name="Show TMX Awards (if available)"]
+bool S_ShowTMXAwards = false;
+
+[Setting category="General" name="Show TMX Tags (if available)"]
+bool S_ShowTMXMapTags = false;
+
 [Setting category="General" name="Lakanta Mode" description="Middle-clicking the TMX Track ID below the records panel will load the next map (by TMX TrackID). Additionally, the TMX ID of that track will be copied to the clipboard."]
 bool S_LakantaMode = false;
 
@@ -117,7 +123,7 @@ bool SP_ShowTMXDojo = true;
 bool SP_ShowMapComment = true;
 
 [Setting category="Persistent Window" name="Show TMX Awards"]
-bool SP_ShowTMXAwards = false;
+bool SP_ShowTMXAwards = true;
 
 [Setting category="Persistent Window" name="Show TMX Tags"]
-bool SP_ShowTMXMapTags = false;
+bool SP_ShowTMXMapTags = true;
