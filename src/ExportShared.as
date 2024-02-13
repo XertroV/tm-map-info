@@ -48,6 +48,9 @@ namespace MapInfo {
         int TMXAuthorID = -1;
         int TrackID = -1;
         string TrackIDStr = "...";
+        uint TMXAwards;
+        string TMXAwardsStr = "...";
+        string TMXMapTags;
         // When `null`, there's no TMX info. It should never be Json::Type::Null.
         Json::Value@ TMX_Info = null;
 

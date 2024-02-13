@@ -115,3 +115,9 @@ bool SP_ShowTMXDojo = true;
 
 [Setting category="Persistent Window" name="Show Map Comment"]
 bool SP_ShowMapComment = true;
+
+[Setting category="Persistent Window" name="Show TMX Awards"]
+bool SP_ShowTMXAwards = false;
+
+[Setting category="Persistent Window" name="Show TMX Tags"]
+bool SP_ShowTMXMapTags = false;
