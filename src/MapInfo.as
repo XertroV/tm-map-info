@@ -97,6 +97,7 @@ class MapInfo_Data : MapInfo::Data {
         GetMapInfoFromMap();
         InitializeMLFinder();
         StartInitializationCoros();
+        RefreshMedalColors();
     }
 
     void InitializeMLFinder() {
