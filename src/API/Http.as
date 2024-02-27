@@ -27,12 +27,12 @@ Json::Value@ CallLiveApiPath(const string &in path) {
 
 Json::Value@ CallCompApiPath(const string &in path) {
     AssertGoodPath(path);
-    return FetchClubEndpoint(NadeoServices::BaseURLCompetition() + path);
+    return FetchClubEndpoint(NadeoServices::BaseURLMeet() + path);
 }
 
 Json::Value@ CallClubApiPath(const string &in path) {
     AssertGoodPath(path);
-    return FetchClubEndpoint(NadeoServices::BaseURLClub() + path);
+    return FetchClubEndpoint(NadeoServices::BaseURLMeet() + path);
 }
 
 auto PluginVersion = Meta::ExecutingPlugin().Version;
