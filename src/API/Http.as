@@ -10,11 +10,11 @@ Json::Value@ FetchLiveEndpoint(const string &in route) {
 }
 
 Json::Value@ FetchClubEndpoint(const string &in route) {
-    NadeoServices::AddAudience("NadeoClubServices");
-    while (!NadeoServices::IsAuthenticated("NadeoClubServices")) yield();
+    NadeoServices::AddAudience("NadeoLiveServices");
+    while (!NadeoServices::IsAuthenticated("NadeoLiveServices")) yield();
 
     log_trace("[FetchClubEndpoint] Requesting: " + route);
-    auto req = NadeoServices::Get("NadeoClubServices", route);
+    auto req = NadeoServices::Get("NadeoLiveServices", route);
     req.Start();
     while(!req.Finished()) { yield(); }
     return Json::Parse(req.String());
