@@ -10,11 +10,11 @@ Json::Value@ FetchLiveEndpoint(const string &in route) {
 }
 
 Json::Value@ FetchClubEndpoint(const string &in route) {
-    NadeoServices::AddAudience("NadeoClubServices");
-    while (!NadeoServices::IsAuthenticated("NadeoClubServices")) yield();
+    NadeoServices::AddAudience("NadeoLiveServices");
+    while (!NadeoServices::IsAuthenticated("NadeoLiveServices")) yield();
 
     log_trace("[FetchClubEndpoint] Requesting: " + route);
-    auto req = NadeoServices::Get("NadeoClubServices", route);
+    auto req = NadeoServices::Get("NadeoLiveServices", route);
     req.Start();
     while(!req.Finished()) { yield(); }
     return Json::Parse(req.String());
@@ -27,12 +27,12 @@ Json::Value@ CallLiveApiPath(const string &in path) {
 
 Json::Value@ CallCompApiPath(const string &in path) {
     AssertGoodPath(path);
-    return FetchClubEndpoint(NadeoServices::BaseURLCompetition() + path);
+    return FetchClubEndpoint(NadeoServices::BaseURLMeet() + path);
 }
 
 Json::Value@ CallClubApiPath(const string &in path) {
     AssertGoodPath(path);
-    return FetchClubEndpoint(NadeoServices::BaseURLClub() + path);
+    return FetchClubEndpoint(NadeoServices::BaseURLMeet() + path);
 }
 
 auto PluginVersion = Meta::ExecutingPlugin().Version;
