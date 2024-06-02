@@ -706,7 +706,7 @@ class MapInfo_UI : MapInfo_Data {
         auto textSize = nvg::TextBounds(mainLabel);
         if (textSize.x > maxTextSize) {
             // don't change the fs var here b/c it makes the text in the side pullout smaller
-            nvg::FontSize(fs * maxTextSize / textSize.x);
+            nvg::FontSize(fs * maxTextSize / Math::Max(1.0, textSize.x));
             textSize = nvg::TextBounds(mainLabel);
             // just set the max size to what we expect to get things pixel perfect.
             textSize.x = maxTextSize;
@@ -906,7 +906,7 @@ class MapInfo_UI : MapInfo_Data {
         bool drawPbs = S_ShowPbDeltaToMedals && PersonalBestTime > 0;
         nbRows *= drawPbs ? 2.0 : 1.0;
         if (drawPbs && S_HideMedalsWorseThanPb) nbRows = Math::Min(float(PersonalBestMedal + 1), nbRows);
-        nbRows = Math::Min(nbRows, S_MaxMedalRowsNb);
+        nbRows = Math::Max(1.0, Math::Min(nbRows, S_MaxMedalRowsNb));
         float rowDelta = (1.0 - (topBottomPad * 2. + topOffset)) / (nbRows);
         float yPropNextRow = topBottomPad + topOffset + rowDelta / 2.0;
         // float yPropFirstRow = S_DrawOnly2MedalsBelowRecords ? (.5 + .025) : (.28 + .025);
@@ -975,7 +975,7 @@ class MapInfo_UI : MapInfo_Data {
         bool drawAuthor = drawBoth || S_DrawTitleAuthorAboveRecords == AboveRecChoice::Only_Author;
         if (drawName) {
             auto nameBounds = nvg::TextBounds(CleanName);
-            auto xScale = Math::Clamp(Math::Min(nameBounds.x, topAuxInfoRect.z - gap * 2.) / Math::Max(1.0, nameBounds.x), 0.001, 1.0);
+            auto xScale = Math::Clamp(Math::Min(nameBounds.x, topAuxInfoRect.z - gap * 2.) / Math::Max(1.0, nameBounds.x), 0.01, 1.0);
             nvg::Scale(xScale, 1);
             nvg::Text((drawBoth ? midPointUpper : midPoint) / vec2(xScale, 1), CleanName);
             nvg::Scale(1.0 / xScale, 1);
@@ -1024,7 +1024,7 @@ class MapInfo_UI : MapInfo_Data {
         float lineHeight = fs + gap;
         float height = gap + lines.Length * lineHeight;
         vec4 bgRect = vec4(0, yTop, screen.x, height);
-        vec2 pos = vec2((Math::Max(0, screen.x / screen.y - 1.77777777) / 2. + 0.069) * screen.y, yTop + gap);
+        vec2 pos = vec2((Math::Max(0, screen.x / Math::Max(screen.y, 1.0) - 1.77777777) / 2. + 0.069) * screen.y, yTop + gap);
 
         // thumbnail cacls
         float thumbH = height - gap * 2.0;
