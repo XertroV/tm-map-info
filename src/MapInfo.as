@@ -975,7 +975,7 @@ class MapInfo_UI : MapInfo_Data {
         bool drawAuthor = drawBoth || S_DrawTitleAuthorAboveRecords == AboveRecChoice::Only_Author;
         if (drawName) {
             auto nameBounds = nvg::TextBounds(CleanName);
-            auto xScale = Math::Clamp(Math::Min(nameBounds.x, topAuxInfoRect.z - gap * 2.) / nameBounds.x, 0.001, 1.0);
+            auto xScale = Math::Clamp(Math::Min(nameBounds.x, topAuxInfoRect.z - gap * 2.) / Math::Max(1.0, nameBounds.x), 0.001, 1.0);
             nvg::Scale(xScale, 1);
             nvg::Text((drawBoth ? midPointUpper : midPoint) / vec2(xScale, 1), CleanName);
             nvg::Scale(1.0 / xScale, 1);
