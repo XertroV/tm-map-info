@@ -273,6 +273,7 @@ class MapInfo_Data : MapInfo::Data {
     }
 
     void CheckChampionMedal() {
+        if (S_IgnoreChampMedals) return;
 #if DEPENDENCY_CHAMPIONMEDALS
         if (!Meta::GetPluginFromID("ChampionMedals").Enabled) return;
         auto startChampCheck = Time::Now;

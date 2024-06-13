@@ -57,6 +57,9 @@ LogLevel S_LogLevel = LogLevel::Info;
 [Setting category="Medal Times" name="Show medal times below records"]
 bool S_DrawMedalsBelowRecords = true;
 
+[Setting category="Medal Times" name="Ignore Champion Medals" description="\\$iOnly checked when loading new map!   \\$zIf Champion Medals is installed, this will ignore CM times and won't show them. If CM is not installed, this does nothing."]
+bool S_IgnoreChampMedals = false;
+
 [Setting category="Medal Times" name="Show only best 2 medal times below records"]
 bool S_DrawOnly2MedalsBelowRecords = false;
 
