@@ -30,7 +30,7 @@ namespace MapInfo {
         string SilverTimeStr = "...";
         string BronzeTimeStr = "...";
         // if a Champion Medal exists (and that plugin is installed) it'll be inserted at index=0
-        uint[] OrderedMedalTimesUint = {-1, -1, -1, -1};
+        uint[] OrderedMedalTimesUint = {uint(-1), uint(-1), uint(-1), uint(-1)};
         string[] OrderedMedalTimes = {"...", "...", "...", "..."};
         vec4[] OrderedMedalColors = {
             vec4(0.000f, 0.471f, 0.035f, 1.0), // Author

@@ -16,8 +16,8 @@ class NvgText {
 
     NvgText(const string &in coloredText) {
         log_debug('NvgText orig: ' + coloredText);
-        auto preText = MakeColorsOkayDarkMode(ColoredString((coloredText))).Replace(" ", SPACE_CHAR);
-        // auto preText = ColoredString((coloredText)).Replace(" ", SPACE_CHAR);
+        auto preText = MakeColorsOkayDarkMode(Text::OpenplanetFormatCodes((coloredText))).Replace(" ", SPACE_CHAR);
+        // auto preText = Text::OpenplanetFormatCodes((coloredText)).Replace(" ", SPACE_CHAR);
         @parts = preText.Split("\\$");
         uint startAt = 0;
         if (!preText.StartsWith("\\$")) {
