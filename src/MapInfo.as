@@ -194,9 +194,9 @@ class MapInfo_Data : MapInfo::Data {
 
     void SetName(const string &in name) {
         RawName = name;
-        Name = ColoredString(name);
+        Name = Text::OpenplanetFormatCodes(name);
         @NvgName = NvgText(name);
-        CleanName = StripFormatCodes(name);
+        CleanName = Text::StripFormatCodes(name);
     }
 
     void GetMapInfoFromCoreAPI() {
@@ -951,7 +951,7 @@ class MapInfo_UI : MapInfo_Data {
     }
 
     void _DrawPbDelta(float xPos, float yPropNextRow, uint medalTime) {
-        bool isNeg = medalTime < PersonalBestTime;
+        bool isNeg = int(medalTime) < PersonalBestTime;
         nvg::FillColor(isNeg ? S_DeltaColorPositive : S_DeltaColorNegative);
         nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(xPos, yPropNextRow), (isNeg ? "+" : "-") + Time::Format(Math::Abs(int(PersonalBestTime) - int(medalTime)), true, false));
     }
@@ -995,7 +995,7 @@ class MapInfo_UI : MapInfo_Data {
 
         string[] lines;
         lines.InsertLast(g_MapInfo.Name);
-        lines.InsertLast("by " + ColoredString(S_AuthorCurrentName && g_MapInfo.AuthorCurrentName.Length > 0 ? g_MapInfo.AuthorCurrentName : g_MapInfo.AuthorDisplayName));
+        lines.InsertLast("by " + Text::OpenplanetFormatCodes(S_AuthorCurrentName && g_MapInfo.AuthorCurrentName.Length > 0 ? g_MapInfo.AuthorCurrentName : g_MapInfo.AuthorDisplayName));
         lines.InsertLast("");
         lines.InsertLast("Published: " + g_MapInfo.DateStr);
 
