@@ -242,6 +242,7 @@ class MapInfo_Data : MapInfo::Data {
         log_trace('MapInfo_Data loaded map data');
         startnew(CoroutineFunc(this.LoadThumbnail));
         startnew(CoroutineFunc(this.CheckChampionMedal));
+        startnew(CoroutineFunc(this.CheckWarriorMedal));
     }
 
     void GetMapInfoFromMap() {
@@ -292,8 +293,32 @@ class MapInfo_Data : MapInfo::Data {
 #endif
     }
 
+    void CheckWarriorMedal() {
+        if (S_IgnoreWarriorMedals) return;
+#if DEPENDENCY_WARRIORMEDALS
+        if (!Meta::GetPluginFromID("WarriorMedals").Enabled) return;
+        auto startWarriorCheck = Time::Now;
+        while (WarriorScore == 0 && Time::Now - startWarriorCheck < 30000 && !SHUTDOWN) {
+            WarriorScore = WarriorMedals::GetWMTime();
+            if (WarriorScore > 0) {
+                WarriorTimeStr = Time::Format(WarriorScore);
+                uint index = ChampionScore > 0 && ChampionScore <= WarriorScore ? 1 : 0;
+                OrderedMedalTimesUint.InsertAt(index, WarriorScore);
+                OrderedMedalTimes.InsertAt(index, WarriorTimeStr);
+                OrderedMedalColors.InsertAt(index, S_MedalColorWarrior);
+                UpdatePBMedal();
+                break;
+            }
+            sleep(250);
+        }
+#endif
+    }
+
     void RefreshMedalColors() {
         OrderedMedalColors = {S_MedalColorAuthor, S_MedalColorGold, S_MedalColorSilver, S_MedalColorBronze};
+        if (WarriorScore > 0) {
+            OrderedMedalColors.InsertAt(0, S_MedalColorWarrior);
+        }
         if (ChampionScore > 0) {
             OrderedMedalColors.InsertAt(0, S_MedalColorChampion);
         }
@@ -1330,6 +1355,7 @@ class MapInfo_UI : MapInfo_Data {
                 DebugTableRowUint("SilverScore", SilverScore);
                 DebugTableRowUint("BronzeScore", BronzeScore);
                 DebugTableRowUint("ChampionScore", ChampionScore);
+                DebugTableRowUint("WarriorScore", WarriorScore);
 
                 DebugTableRowInt("UploadedToNadeo", UploadedToNadeo);
                 DebugTableRowButton("TMioButton", TMioButton);
