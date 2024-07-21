@@ -305,7 +305,7 @@ class MapInfo_Data : MapInfo::Data {
                 uint index = ChampionScore > 0 && ChampionScore <= WarriorScore ? 1 : 0;
                 OrderedMedalTimesUint.InsertAt(index, WarriorScore);
                 OrderedMedalTimes.InsertAt(index, WarriorTimeStr);
-                OrderedMedalColors.InsertAt(index, S_MedalColorWarrior);
+                OrderedMedalColors.InsertAt(index, vec4(WarriorMedals::GetColorVec(), 1.0f));
                 UpdatePBMedal();
                 break;
             }
@@ -317,7 +317,7 @@ class MapInfo_Data : MapInfo::Data {
     void RefreshMedalColors() {
         OrderedMedalColors = {S_MedalColorAuthor, S_MedalColorGold, S_MedalColorSilver, S_MedalColorBronze};
         if (WarriorScore > 0) {
-            OrderedMedalColors.InsertAt(0, S_MedalColorWarrior);
+            OrderedMedalColors.InsertAt(0, vec4(WarriorMedals::GetColorVec(), 1.0f));
         }
         if (ChampionScore > 0) {
             OrderedMedalColors.InsertAt(0, S_MedalColorChampion);

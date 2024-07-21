@@ -83,8 +83,6 @@ vec4 S_DeltaColorPositive = vec4(0.930f, 0.308f, 0.053f, 1.000f);
 
 [Setting category="Medal Times" name="Champion Medal Color" color]
 vec4 S_MedalColorChampion = vec4(0.847f, 0.165f, 0.337f, 1.000f);
-[Setting category="Medal Times" name="Warrior Medal Color" color]
-vec4 S_MedalColorWarrior = vec4(0.2f, 0.8f, 1.0f, 1.000f);
 [Setting category="Medal Times" name="Author Medal Color" color]
 vec4 S_MedalColorAuthor = vec4(0.024f, 0.604f, 0.065f, 1.000f);
 [Setting category="Medal Times" name="Gold Medal Color" color]
