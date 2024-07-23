@@ -316,9 +316,11 @@ class MapInfo_Data : MapInfo::Data {
 
     void RefreshMedalColors() {
         OrderedMedalColors = {S_MedalColorAuthor, S_MedalColorGold, S_MedalColorSilver, S_MedalColorBronze};
+#if DEPENDENCY_WARRIORMEDALS
         if (WarriorScore > 0) {
             OrderedMedalColors.InsertAt(0, vec4(WarriorMedals::GetColorVec(), 1.0f));
         }
+#endif
         if (ChampionScore > 0) {
             OrderedMedalColors.InsertAt(0, S_MedalColorChampion);
         }
