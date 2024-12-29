@@ -125,6 +125,9 @@ bool SP_ShowTotDDate = true;
 [Setting category="Persistent Window" name="Show number of players"]
 bool SP_ShowNbPlayers = true;
 
+[Setting category="Persistent Window" name="Show author time"]
+bool SP_ShowAuthorTime = true;
+
 [Setting category="Persistent Window" name="Show worst time"]
 bool SP_ShowWorstTime = true;
 

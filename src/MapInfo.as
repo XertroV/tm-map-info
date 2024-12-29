@@ -394,15 +394,23 @@ class MapInfo_Data : MapInfo::Data {
 
     void GetMapTMXStatus() {
         auto tmxTrack = TMX::GetMapFromUid(uid);
+        log_debug('TMX track: ' + Json::Write(tmxTrack));
         if (tmxTrack !is null && tmxTrack.GetType() == Json::Type::Object) {
+            // to add fields, see API/TMX.as `getMapByUidEndpoint`
             UploadedToTMX = 1;
-            TMXAuthorID = int(tmxTrack.Get('UserID', -1));
-            TrackID = int(tmxTrack.Get('TrackID', -1));
+            TrackID = int(tmxTrack.Get('MapId', -1));
             TrackIDStr = tostring(TrackID);
             TMXAwards = int(tmxTrack.Get('AwardCount', -1));
             TMXAwardsStr = tostring(TMXAwards);
+            TMXAuthorID = -1;
+            try {
+                TMXAuthorID = int(tmxTrack['Authors'][0]['User']['UserId']);
+            } catch {
+                log_info('Failed to get TMXAuthorID = Authors[0].User.UserId');
+            }
 
-            string[]@ TMXMapTagIDs = string(tmxTrack.Get('Tags', -1)).Split(",");
+            string[]@ TMXMapTagIDs = GetTmxMapTagIds(tmxTrack);
+            log_debug('TMXMapTagIDs: ' + Json::Write(TMXMapTagIDs.ToJson()));
             if(!TMXMapTagIDs.IsEmpty()) {
                 string mapTag = string(TMX::mapTags[TMXMapTagIDs[0]]);
                 TMXMapTags = mapTag;
@@ -415,6 +423,8 @@ class MapInfo_Data : MapInfo::Data {
             @TMX_Info = tmxTrack;
             @TMXButton = NvgButton(vec4(1, 1, 1, .8), vec4(0, 0, 0, 1), CoroutineFunc(this.OnClickTmxButton));
             @TMXAuthorButton = NvgButton(vec4(1, 1, 1, .8), vec4(0, 0, 0, 1), CoroutineFunc(this.OnClickTmxAuthorButton));
+            // for compatibility
+            TMX_Info['TrackID'] = TrackID;
         } else {
             UploadedToTMX = 0;
             TrackIDStr = "Not Uploaded";
@@ -1167,9 +1177,9 @@ class MapInfo_UI : MapInfo_Data {
         }
 
         if (ShouldDrawTMXAwards)
-            pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, Icons::Trophy + " Awards", TMXAwardsStr, TMXAwardsStr, alpha);
+            pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, Icons::Trophy + " Awards", TMXAwardsStr, null, alpha);
         if (ShouldDrawTMXTags)
-            pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Tags", TMXMapTags, TMXMapTags, alpha);
+            pos = DrawDataLabels(pos.xyz.xy, col, yStep, col2X, fs, "Tags", TMXMapTags, null, alpha);
 
         /* Thumbnail*/
 
@@ -1261,7 +1271,8 @@ class MapInfo_UI : MapInfo_Data {
                 UI::TableSetupColumn("value", UI::TableColumnFlags::WidthStretch);
 
                 if (SP_ShowPubDate)    PersistentTableRowStr("Published", DateStr);
-                if (SP_ShowTotDDate)   PersistentTableRowStr("TotD", TOTDStr);
+                if (TOTDDaysAgo >= 0 && SP_ShowTotDDate)   PersistentTableRowStr("TotD", TOTDStr);
+                if (SP_ShowAuthorTime) PersistentTableRowStr("Author Time", "\\$080" + Icons::Circle + "\\$z " + AuthorTimeStr);
                 if (SP_ShowNbPlayers)  PersistentTableRowStr("Players", NbPlayersStr);
                 if (SP_ShowWorstTime)  PersistentTableRowStr("Worst Time", WorstTimeStr);
                 if (SP_ShowTMXDojo)    PersistentTableRowStr("TMX ID", TrackIDStr);
