@@ -8,7 +8,7 @@ siteid = 320
 [script]
 dependencies = ["NadeoServices"]
 optional_dependencies = ["ManiaExchange", "ChampionMedals", "WarriorMedals"]
-exports = ["ExportFunc.as"]
-shared_exports = ["ExportShared.as"]
+exports = ["src/ExportFunc.as"]
+shared_exports = ["src/ExportShared.as"]
 #__DEFINES__
 module = "MapInfo"
