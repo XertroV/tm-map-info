@@ -2,7 +2,7 @@
 name = "Map Info"
 author = "MisfitMaid, XertroV"
 category = "Overlay"
-version = "0.5.8"
+version = "0.5.9"
 siteid = 320
 
 [script]
