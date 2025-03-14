@@ -335,8 +335,17 @@ class ManialinkDetector {
         log_debug('records visible: ' + tostring(isElementVisible));
         yield();
 
+        auto app = GetApp();
         while (!mapInfo.SHUTDOWN) {
-            if (GetApp().RootMap is null || GetApp().RootMap.EdChallengeId != mapInfo.uid) break;
+            auto map = app.RootMap;
+            if (map is null || map.EdChallengeId != mapInfo.uid) break;
+            if (app.SystemOverlay.ScriptDebugger.Visibility != CGameScriptDebugger::EVisibility::Hidden) {
+                @MainFrame = null;
+                @SlideFrame = null;
+                mapInfo.Shutdown();
+                isElementVisible = false;
+                break;
+            }
             isElementVisible = IsSafeToCheckUI() && IsElementVisible();
             yield();
         }
@@ -391,7 +400,9 @@ class ManialinkDetector {
         if (nbUiLayers <= 2 || nbUiLayers < lastNbUilayers) {
             log_debug('nbUiLayers: ' + nbUiLayers + '; lastNbUilayers' + lastNbUilayers);
             // lastNbUilayers = 0;
-            return false;
+            if (nbUiLayers < lastNbUilayers - 5) {
+                return false;
+            }
         }
         lastNbUilayers = nbUiLayers;
         return true;

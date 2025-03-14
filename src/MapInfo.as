@@ -12,7 +12,7 @@ void CheckForNewMap() {
     // todo: check app.RootMap.MapInfo.IsPlayable corresponds to unvalidated maps
     // it does not, tmx 40066 is an example
     // || !app.RootMap.MapInfo.IsPlayable
-    if (app.RootMap is null) { // || app.Editor !is null) { // app.CurrentPlayground is null ||
+    if (app.RootMap is null || app.Editor !is null) { // app.CurrentPlayground is null ||
         mapUid = "";
     } else {
         mapUid = app.RootMap.MapInfo.MapUid;
