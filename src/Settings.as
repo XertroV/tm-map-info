@@ -1,7 +1,7 @@
 [Setting hidden]
 bool S_ShowMapInfo = true;
 
-[Setting category="General" name="Compact View when Records Collapsed  \\$0f0\\$oNEW" description="When enabled, MapInfo will stay visible when the records are collapsed."]
+[Setting category="General" name="Compact View when Records Collapsed" description="When enabled, MapInfo will stay visible when the records are collapsed."]
 bool S_MinViewWhenRecordsCollapsed = true;
 
 [Setting category="General" name="Retrieve author's current username"]
