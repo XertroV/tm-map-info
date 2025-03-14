@@ -340,6 +340,7 @@ class MapInfo_Data : MapInfo::Data {
     }
 
     void UpdateNbPlayersString() {
+        // bug: 16000 shows as 6-16k
         NbPlayersStr = NbPlayers > 10000 && NbPlayers % 1000 == 0 ? GetNbPlayersRange() : tostring(NbPlayers);
         log_debug('Set NbPlayersStr to: ' + NbPlayersStr);
     }
@@ -550,7 +551,8 @@ class MapInfo_Data : MapInfo::Data {
 
     bool ShouldDrawUI {
         get {
-            return _GameUIVisible && mlDetector.isElementVisible
+            return _GameUIVisible
+                && (S_MinViewWhenRecordsCollapsed || mlDetector.isElementVisible)
                 && !ScoreTableVisible()
                 && !SoloMenuOpen()
                 ;
@@ -672,37 +674,76 @@ class MapInfo_UI : MapInfo_Data {
     AnimMgr@ mainAnim = AnimMgr();
     AnimMgr@ hoverAnim = AnimMgr();
 
+    // draw compact view stuff when true. bug: compact view on + loading map -> map info shows in middle of screen for a few seconds
+    bool _minViewWhenRecordsCollapsed = false;
+    // flag to control compact view after pause menu; only needed after
+    bool _hasBeenOpenAfterMenu = false;
+
     void Draw() {
         CheckLoadCountryFlag();
 
         if (!LoadedNbPlayers && Time::Now - LoadingStartedAt < 5000) return;
-        auto cmap = GetApp().Network.ClientManiaAppPlayground;
-        auto pgcsa = GetApp().Network.PlaygroundClientScriptAPI;
-        auto ps = cast<CSmArenaRulesMode>(GetApp().PlaygroundScript);
+        auto app = GetApp();
+        auto cmap = app.Network.ClientManiaAppPlayground;
+        auto pgcsa = app.Network.PlaygroundClientScriptAPI;
+        // auto ps = cast<CSmArenaRulesMode>(GetApp().PlaygroundScript);
         bool closed = !S_ShowMapInfo
-            || !_GameUIVisible
-            || !ShouldDrawUI
-            || cmap is null || !IsGoodUISequence(cmap.UI.UISequence)
+            || !_GameUIVisible;
+        bool shouldDrawUI = !closed && ShouldDrawUI;
+        shouldDrawUI = shouldDrawUI && !(
+               cmap is null || !IsGoodUISequence(cmap.UI.UISequence)
             || pgcsa is null || pgcsa.IsInGameMenuDisplayed
+            || int(app.LoadProgress.State) > 0 // Disabled=0, Displayed=1
+        );
+        closed = closed
+            || !shouldDrawUI
             // || (ps !is null && ps.StartTime > 2147483000)
             ;
+
+        // compact view stuff
+        if (!shouldDrawUI && S_MinViewWhenRecordsCollapsed && _hasBeenOpenAfterMenu) {
+            _hasBeenOpenAfterMenu = false;
+            _minViewWhenRecordsCollapsed = false;
+            // warn("setting has been open after menu = false");
+        }
+        // trace("shouldDrawUI: " + shouldDrawUI + ", closed: " + closed + ", minViewWhenRecordsCollapsed: " + _minViewWhenRecordsCollapsed + ", hasBeenOpenAfterMenu: " + _hasBeenOpenAfterMenu);
+
+        // main closed/anim update
         if (closed) {
             lastMapInfoSize = vec2();
         }
-        if (!mainAnim.Update(!closed, mlDetector.slideProgress)) return;
+        if (!mainAnim.Update(!closed, mlDetector.slideProgress) && !shouldDrawUI) {
+            return;
+        }
+
+        // update flag to control compact view after pause menu
+        if (!_hasBeenOpenAfterMenu && (mainAnim.IsDone || (!mlDetector.isElementVisible && S_MinViewWhenRecordsCollapsed))) {
+            // warn("has been open after menu = true");
+            _hasBeenOpenAfterMenu = true;
+        }
+        _minViewWhenRecordsCollapsed = S_MinViewWhenRecordsCollapsed && !closed && _hasBeenOpenAfterMenu;
 
         auto rect = UpdateBounds();
 
         float fs = fontProp * screen.y * mlDetector.mainFrameAbsScale;
         xPad = xPaddingProp * screen.y; // * mlDetector.mainFrameAbsScale
         float gap = gapProp * screen.y * mlDetector.mainFrameAbsScale;
+        // guessed height of records
         float guessedHeightPx = recordsGuessedHeight * screen.y * mlDetector.mainFrameAbsScale;
+        if (_minViewWhenRecordsCollapsed) {
+            guessedHeightPx = guessedHeightPx * mainAnim.Progress;
+        }
 
         // check max size assuming refresh-leadersboards exists
         float recordsWidth = fullWidthProp * screen.y * mlDetector.mainFrameAbsScale;
         float maxTextSize = recordsWidth - (rect.w + gap + xPad) * 2.0;
         // if this is happening something is not right
-        if (maxTextSize <= 0) return;
+        if (maxTextSize <= 0) {
+#if DEV
+            warn("maxTextSize <= 0, recordsWidth: " + recordsWidth + ", rect.w: " + rect.w + ", gap: " + gap + ", xPad: " + xPad + ", fullWidthProp: " + fullWidthProp);
+#endif
+            return;
+        }
 
         string mainLabel = Icons::Users + " " + NbPlayersStr;
 
@@ -737,9 +778,14 @@ class MapInfo_UI : MapInfo_Data {
         // first, set up a scissor similar to the records UI
         nvg::Scissor(rect.x, rect.y, rect.z, rect.w);
 
-        // now, offset everything depending on slider progress
-        nvg::Translate(vec2((1.0 - mainAnim.Progress) * rect.z, 0));
-        // that's all we need.
+        // if we are not using Compact View
+        if (!_minViewWhenRecordsCollapsed) {
+            // now, offset everything depending on slider progress
+            nvg::Translate(vec2((1.0 - mainAnim.Progress) * rect.z, 0));
+            // that's all we need.
+        } else {
+            // don't translate left/right
+        }
 
         nvg::BeginPath();
         DrawBgRect(rect.xyz.xy, vec2(rect.z, rect.w));
@@ -772,7 +818,11 @@ class MapInfo_UI : MapInfo_Data {
         nvg::FontSize(fs * hScale);
 
         extraHeightBelowRecords = 0;
-        auxInfoRect = vec4(rect.x + rect.z - recordsWidth, rect.y + guessedHeightPx + gap * 2 + rect.w, recordsWidth, rect.w * hScale);
+        float tmpGap = gap * 2;
+        if (_minViewWhenRecordsCollapsed) {
+            tmpGap -= gap * (1.0 - mainAnim.Progress);
+        }
+        auxInfoRect = vec4(rect.x + rect.z - recordsWidth, rect.y + guessedHeightPx + tmpGap + rect.w, recordsWidth, rect.w * hScale);
         bool drawTmxId = S_DrawTMXBelowRecords && UploadedToTMX == 1;
         if (drawTmxId) {
             // todo: can't exactly remember what this was doing
@@ -808,7 +858,7 @@ class MapInfo_UI : MapInfo_Data {
             || IsWithin(g_MouseCoords, rect.xy * hoverScale + vec2(rect.z * widthSquish + gap, -topAuxInfoRect.w), lastMapInfoSize)
             || IsWithin(g_MouseCoords, topAuxInfoRect.xy * hoverScale, topAuxInfoRect.zw)
             ;
-        if (hoverAnim.Update(!closed && rawHover, mlDetector.slideProgress)) {
+        if (hoverAnim.Update(!closed && rawHover, _minViewWhenRecordsCollapsed ? 1.0 : mlDetector.slideProgress)) {
             DrawHoveredInterface(rect, fs, textHOffset, gap);
         } else {
             lastMapInfoSize = vec2();
@@ -886,7 +936,11 @@ class MapInfo_UI : MapInfo_Data {
     void Draw_TMXBelowRecords(vec4 auxInfoRect) {
         nvg::Scale(widthSquish, 1);
         nvg::Scissor(auxInfoRect.x, auxInfoRect.y, auxInfoRect.z, auxInfoRect.w);
-        nvg::Translate(vec2((1.0 - mainAnim.Progress) * auxInfoRect.z, 0));
+        if (!_minViewWhenRecordsCollapsed) {
+            nvg::Translate(vec2((1.0 - mainAnim.Progress) * auxInfoRect.z, 0));
+        } else {
+            nvg::Translate(vec2(0, mainAnim.Progress ));
+        }
         nvg::BeginPath();
         DrawBgRect(auxInfoRect.xy, auxInfoRect.zw);
         nvg::ClosePath();
@@ -899,7 +953,9 @@ class MapInfo_UI : MapInfo_Data {
     void Draw_MedalsBelowRecords() {
         nvg::Scale(widthSquish, 1);
         nvg::Scissor(medalsInfoRect.x, medalsInfoRect.y, medalsInfoRect.z, medalsInfoRect.w);
-        nvg::Translate(vec2((1.0 - mainAnim.Progress) * medalsInfoRect.z, 0));
+        if (!_minViewWhenRecordsCollapsed) {
+            nvg::Translate(vec2((1.0 - mainAnim.Progress) * medalsInfoRect.z, 0));
+        }
         nvg::BeginPath();
         DrawBgRect(medalsInfoRect.xy, medalsInfoRect.zw);
         nvg::ClosePath();
@@ -969,7 +1025,9 @@ class MapInfo_UI : MapInfo_Data {
     void Draw_MapNameAuthorAboveRecords(float gap) {
         nvg::Scale(widthSquish, 1);
         nvg::Scissor(topAuxInfoRect.x, topAuxInfoRect.y, topAuxInfoRect.z, topAuxInfoRect.w);
-        nvg::Translate(vec2((1.0 - mainAnim.Progress) * topAuxInfoRect.z, 0));
+        if (!_minViewWhenRecordsCollapsed) {
+            nvg::Translate(vec2((1.0 - mainAnim.Progress) * topAuxInfoRect.z, 0));
+        }
 
         nvg::BeginPath();
         DrawBgRect(topAuxInfoRect.xy, topAuxInfoRect.zw);

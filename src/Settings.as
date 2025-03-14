@@ -1,14 +1,8 @@
 [Setting hidden]
 bool S_ShowMapInfo = true;
 
-[Setting category="Modes" name="Show Map Info in COTD Qualifiers?"]
-bool S_EnableDuringCotdQualit = true;
-
-// need to tweak KO, not always aligned correctly
-#if FALSE
-[Setting category="Modes" name="Show Map Info in Knockout?"]
-#endif
-bool S_EnableDuringKO = false;
+[Setting category="General" name="Compact View when Records Collapsed  \\$0f0\\$oNEW" description="When enabled, MapInfo will stay visible when the records are collapsed."]
+bool S_MinViewWhenRecordsCollapsed = true;
 
 [Setting category="General" name="Retrieve author's current username"]
 bool S_AuthorCurrentName = true;
@@ -52,6 +46,18 @@ bool S_ShowDebugMenuItem = false;
 
 [Setting category="General" name="Log Level"]
 LogLevel S_LogLevel = LogLevel::Info;
+
+
+
+[Setting category="Modes" name="Show Map Info in COTD Qualifiers?"]
+bool S_EnableDuringCotdQualit = true;
+
+// need to tweak KO, not always aligned correctly
+#if FALSE
+[Setting category="Modes" name="Show Map Info in Knockout?"]
+#endif
+bool S_EnableDuringKO = false;
+
 
 
 [Setting category="Medal Times" name="Show medal times below records"]
