@@ -163,12 +163,11 @@ class MapInfo_Data : MapInfo::Data {
 
     int GetMedalForTime(uint time) {
         auto len = OrderedMedalTimesUint.Length;
-        if (len > 0 && time <= OrderedMedalTimesUint[0]) return 0;
-        if (len > 1 && time <= OrderedMedalTimesUint[1]) return 1;
-        if (len > 2 && time <= OrderedMedalTimesUint[2]) return 2;
-        if (len > 3 && time <= OrderedMedalTimesUint[3]) return 3;
-        if (len > 4 && time <= OrderedMedalTimesUint[4]) return 4;
-        if (len > 5 && time <= OrderedMedalTimesUint[5]) return 5;
+        for (uint i = 0; i < len; i++) {
+            if (time <= OrderedMedalTimesUint[i]) {
+                return i;
+            }
+        }
         return 999;
     }
 
