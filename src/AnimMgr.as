@@ -16,7 +16,7 @@ class AnimMgr {
         lastGrowingChange = Time::Now;
     }
 
-    // return true if
+    // return true if open (animOut > 0)
     bool Update(bool growing, float clampMax = 1.0) {
         if (lastGrowingChange == 0) lastGrowingChange = Time::Now;
         if (lastGrowingCheck == 0) lastGrowingCheck = Time::Now;

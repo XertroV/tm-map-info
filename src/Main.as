@@ -78,13 +78,32 @@ void Render() {
 const string MenuLabel = "\\$8f0" + Icons::Map + "\\$z " + Meta::ExecutingPlugin().Name;
 
 void RenderMenu() {
-    if (UI::MenuItem(MenuLabel, "", S_ShowMapInfo)) {
-        S_ShowMapInfo = !S_ShowMapInfo;
+    if (UI::BeginMenu(MenuLabel)) {
+        if (UI::MenuItem("Show Map Info (or hide)", "", S_ShowMapInfo)) {
+            S_ShowMapInfo = !S_ShowMapInfo;
+        }
+
+        if (UI::MenuItem("Show Persistent Window", "", S_ShowPersistentUI)) {
+            S_ShowPersistentUI = !S_ShowPersistentUI;
+        }
+
+        UI::SeparatorText("");
+
+        if (UI::MenuItem("Reinitialize Map Info") && g_MapInfo !is null) {
+            OnNewMap();
+        }
+
+        if (UI::MenuItem("Deinitialize Map Info (for this map)") && g_MapInfo !is null) {
+            g_MapInfo.Shutdown();
+            @g_MapInfo = null;
+        }
+
+        if (S_ShowDebugMenuItem && UI::MenuItem(MenuLabel + " (Debug Window)", "", S_ShowDebugUI)) {
+            S_ShowDebugUI = !S_ShowDebugUI;
+        }
+        UI::EndMenu();
     }
 
-    if (S_ShowDebugMenuItem && UI::MenuItem(MenuLabel + " (Debug Window)", "", S_ShowDebugUI)) {
-        S_ShowDebugUI = !S_ShowDebugUI;
-    }
 }
 
 void OnSettingsChanged() {

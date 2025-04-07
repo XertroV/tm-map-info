@@ -63,14 +63,17 @@ class ManialinkDetectorGroup {
         for (uint i = 0; i < detectors.Length; i++) {
             if (detectors[i].isElementVisible) return detectors[i].fullWidthPxOnBaseRes;
         }
-        return 1.0;
+        if (detectors.Length == 0) return 400.0;
+        return detectors[0].fullWidthPxOnBaseRes;
     }
 
+    // default for records -- workaround for compact view when loading map
+    vec2 _last_mainFrameAbsPos = vec2(-160, 30);
     vec2 get_mainFrameAbsPos() {
         for (uint i = 0; i < detectors.Length; i++) {
-            if (detectors[i].isElementVisible) return detectors[i].mainFrameAbsPos;
+            if (detectors[i].isElementVisible) return (_last_mainFrameAbsPos = detectors[i].mainFrameAbsPos);
         }
-        return 1.0;
+        return _last_mainFrameAbsPos;
     }
 
     uint get_nbRecordsShown() {
@@ -271,11 +274,12 @@ class ManialinkDetector {
             log_debug("\\$fa8FOUND ML ELEMENTS");
         }
 
-        if (MainFrame is null || !MainFrame.Visible) return false;
+        if (MainFrame is null) return false;
+        mainFrameAbsPos = MainFrame.AbsolutePosition_V3 + AbsPositionOffset;
+        if (!MainFrame.Visible) return false;
         if (hasSlideFrame && (SlideFrame is null || !SlideFrame.Visible)) return false;
 
         if (!ParentsNullOrVisible(MainFrame, 7)) return false;
-        mainFrameAbsPos = MainFrame.AbsolutePosition_V3 + AbsPositionOffset;
         // scale customized by some dedicated servers
         mainFrameAbsScale = MainFrame.AbsoluteScale;
         // if the abs scale is too low (or negative) it causes problems. no legit case is like this so just set to 1
@@ -335,8 +339,17 @@ class ManialinkDetector {
         log_debug('records visible: ' + tostring(isElementVisible));
         yield();
 
+        auto app = GetApp();
         while (!mapInfo.SHUTDOWN) {
-            if (GetApp().RootMap is null || GetApp().RootMap.EdChallengeId != mapInfo.uid) break;
+            auto map = app.RootMap;
+            if (map is null || map.EdChallengeId != mapInfo.uid) break;
+            if (app.SystemOverlay.ScriptDebugger.Visibility != CGameScriptDebugger::EVisibility::Hidden) {
+                @MainFrame = null;
+                @SlideFrame = null;
+                mapInfo.Shutdown();
+                isElementVisible = false;
+                break;
+            }
             isElementVisible = IsSafeToCheckUI() && IsElementVisible();
             yield();
         }
@@ -391,7 +404,9 @@ class ManialinkDetector {
         if (nbUiLayers <= 2 || nbUiLayers < lastNbUilayers) {
             log_debug('nbUiLayers: ' + nbUiLayers + '; lastNbUilayers' + lastNbUilayers);
             // lastNbUilayers = 0;
-            return false;
+            if (nbUiLayers < lastNbUilayers - 5) {
+                return false;
+            }
         }
         lastNbUilayers = nbUiLayers;
         return true;
