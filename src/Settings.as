@@ -66,6 +66,9 @@ bool S_DrawMedalsBelowRecords = true;
 [Setting category="Medal Times" name="Ignore Champion Medals" description="\\$iOnly checked when loading new map!   \\$zIf Champion Medals is installed, this will ignore CM times and won't show them. If CM is not installed, this does nothing."]
 bool S_IgnoreChampMedals = false;
 
+[Setting category="Medal Times" name="Ignore Warrior Medals" description="\\$iOnly checked when loading new map!   \\$zIf Warrior Medals is installed, this will ignore WM times and won't show them. If WM is not installed, this does nothing."]
+bool S_IgnoreWarriorMedals = false;
+
 [Setting category="Medal Times" name="Show only best 2 medal times below records"]
 bool S_DrawOnly2MedalsBelowRecords = false;
 
@@ -75,8 +78,8 @@ bool S_ShowPbDeltaToMedals = true;
 [Setting category="Medal Times" name="Hide Medals after the first worse than PB"]
 bool S_HideMedalsWorseThanPb = true;
 
-[Setting category="Medal Times" name="Max. Medal Rows to Show" min=1 max=5 description="If limited to 1, it will only show CM or AT with PB deltas on, and CM + AT or AT + Gold otherwise."]
-uint S_MaxMedalRowsNb = 5;
+[Setting category="Medal Times" name="Max. Medal Rows to Show" min=1 max=6 description="If limited to 1, it will only show CM or AT with PB deltas on, and CM + AT or AT + Gold otherwise."]
+uint S_MaxMedalRowsNb = 6;
 
 [Setting category="Medal Times" name="Negative PB Delta Color" color]
 vec4 S_DeltaColorNegative = vec4(0.170f, 0.463f, 0.943f, 1.000f);

@@ -7,7 +7,7 @@ siteid = 320
 
 [script]
 dependencies = ["NadeoServices"]
-optional_dependencies = ["ManiaExchange", "ChampionMedals", "UltrawideUIFix"]
+optional_dependencies = ["ManiaExchange", "ChampionMedals", "UltrawideUIFix", "WarriorMedals"]
 exports = ["ExportFunc.as"]
 shared_exports = ["ExportShared.as"]
 #__DEFINES__

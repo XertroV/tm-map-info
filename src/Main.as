@@ -1,5 +1,5 @@
-// int g_NvgFont = nvg::LoadFont("fonts/Montserrat-BoldItalic.ttf", true, true);
-int g_NvgFont = nvg::LoadFont("fonts/Montserrat-SemiBoldItalic.ttf", true, true);
+// int g_NvgFont = nvg::LoadFont("fonts/Montserrat-BoldItalic.ttf");
+int g_NvgFont = nvg::LoadFont("fonts/Montserrat-SemiBoldItalic.ttf");
 UI::Font@ g_ImguiFont = null;
 
 void Main() {

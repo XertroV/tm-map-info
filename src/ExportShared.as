@@ -24,11 +24,14 @@ namespace MapInfo {
         uint SilverScore = 0;
         uint BronzeScore = 0;
         uint ChampionScore = 0;
+        uint WarriorScore = 0;
         string ChampionTimeStr = "...";
+        string WarriorTimeStr = "...";
         string AuthorTimeStr = "...";
         string GoldTimeStr = "...";
         string SilverTimeStr = "...";
         string BronzeTimeStr = "...";
+        // if a Warrior Medal exists (and that plugin is installed) it'll be inserted at index=0
         // if a Champion Medal exists (and that plugin is installed) it'll be inserted at index=0
         uint[] OrderedMedalTimesUint = {uint(-1), uint(-1), uint(-1), uint(-1)};
         string[] OrderedMedalTimes = {"...", "...", "...", "..."};
