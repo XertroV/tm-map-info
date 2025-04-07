@@ -68,12 +68,15 @@ class ManialinkDetectorGroup {
     }
 
     // default for records -- workaround for compact view when loading map
-    vec2 _last_mainFrameAbsPos = vec2(-160, 30);
     vec2 get_mainFrameAbsPos() {
         for (uint i = 0; i < detectors.Length; i++) {
-            if (detectors[i].isElementVisible) return (_last_mainFrameAbsPos = detectors[i].mainFrameAbsPos);
+            if (detectors[i].isElementVisible) return (detectors[i].mainFrameAbsPos);
         }
-        return _last_mainFrameAbsPos;
+#if DEPENDENCY_ULTRAWIDEUIFIX
+            return vec2(-160 - UltrawideUIFix::GetUiShift(), 30);
+#else
+            return vec2(-160, 30);
+#endif
     }
 
     uint get_nbRecordsShown() {
