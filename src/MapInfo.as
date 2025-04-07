@@ -107,7 +107,7 @@ class MapInfo_Data : MapInfo::Data {
         isKoRounds = si.CurGameModeStr.StartsWith("TM_Knockout");
         isNormalRecords = !isCotdQuali && !isKoRounds;
         if (isNormalRecords) @mlDetector = ManialinkDetectorGroup().Add(RecordsMLDetector());
-        else if (S_EnableDuringCotdQualit && isCotdQuali) @mlDetector = ManialinkDetectorGroup().Add(COTDQualiPMLDetector(), COTDQualiRankingMLDetector());
+        else if (S_EnableDuringCotdQuali && isCotdQuali) @mlDetector = ManialinkDetectorGroup().Add(COTDQualiPMLDetector(), COTDQualiRankingMLDetector());
         else if (S_EnableDuringKO && isKoRounds) @mlDetector = ManialinkDetectorGroup().Add(KnockoutMLDetector());
         // make sure we have something here since it is expected to be non-null
         if (mlDetector is null) {
@@ -580,6 +580,8 @@ class MapInfo_Data : MapInfo::Data {
         get {
             return _GameUIVisible
                 && (S_MinViewWhenRecordsCollapsed || mlDetector.isElementVisible)
+                && (!isKoRounds || S_EnableDuringKO)
+                && (!isCotdQuali || S_EnableDuringCotdQuali)
                 && !ScoreTableVisible()
                 && !SoloMenuOpen()
                 ;

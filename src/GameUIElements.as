@@ -73,9 +73,9 @@ class ManialinkDetectorGroup {
             if (detectors[i].isElementVisible) return (detectors[i].mainFrameAbsPos);
         }
 #if DEPENDENCY_ULTRAWIDEUIFIX
-            return vec2(-160 - UltrawideUIFix::GetUiShift(), 30);
+        return vec2(-160 - UltrawideUIFix::GetUiShift(), 30);
 #else
-            return vec2(-160, 30);
+        return vec2(-160, 30);
 #endif
     }
 

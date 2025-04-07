@@ -50,7 +50,7 @@ LogLevel S_LogLevel = LogLevel::Info;
 
 
 [Setting category="Modes" name="Show Map Info in COTD Qualifiers?"]
-bool S_EnableDuringCotdQualit = true;
+bool S_EnableDuringCotdQuali = true;
 
 // need to tweak KO, not always aligned correctly
 #if FALSE
