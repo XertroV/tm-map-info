@@ -95,7 +95,7 @@ class ManialinkDetectorGroup {
     }
 
     void MonitorVisibility(MapInfo_Data@ mapInfo) {
-        array<Meta::PluginCoroutine@> coros;
+        array<awaitable@> coros;
         for (uint i = 0; i < detectors.Length; i++) {
             coros.InsertLast(detectors[i].MonitorVisibilityCoro(mapInfo));
         }
@@ -305,7 +305,7 @@ class ManialinkDetector {
         return IsUIPopulated();
     }
 
-    Meta::PluginCoroutine@ MonitorVisibilityCoro(MapInfo_Data@ mi) {
+    awaitable@ MonitorVisibilityCoro(MapInfo_Data@ mi) {
         return startnew(CoroutineFuncUserdata(this.MonitorVisibility), mi);
     }
 
