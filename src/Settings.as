@@ -4,6 +4,14 @@ bool S_ShowMapInfo = true;
 [Setting category="General" name="Compact View when Records Collapsed" description="When enabled, MapInfo will stay visible when the records are collapsed."]
 bool S_MinViewWhenRecordsCollapsed = true;
 
+enum Direction {
+    Left,
+    Right
+};
+
+[Setting category="General" name="Close animation direction" description="The direction of the animation used when MapInfo is closed"]
+Direction S_CloseDirection = Direction::Right;
+
 [Setting category="General" name="Retrieve author's current username"]
 bool S_AuthorCurrentName = true;
 

@@ -809,7 +809,8 @@ class MapInfo_UI : MapInfo_Data {
         // if we are not using Compact View
         if (!_minViewWhenRecordsCollapsed) {
             // now, offset everything depending on slider progress
-            nvg::Translate(vec2((1.0 - mainAnim.Progress) * rect.z, 0));
+            float offset = S_CloseDirection == Direction::Left ? mainAnim.Progress - 1.0 : 1.0 - mainAnim.Progress;
+            nvg::Translate(vec2(offset * rect.z, 0));
             // that's all we need.
         } else {
             // don't translate left/right
@@ -965,7 +966,8 @@ class MapInfo_UI : MapInfo_Data {
         nvg::Scale(widthSquish, 1);
         nvg::Scissor(auxInfoRect.x, auxInfoRect.y, auxInfoRect.z, auxInfoRect.w);
         if (!_minViewWhenRecordsCollapsed) {
-            nvg::Translate(vec2((1.0 - mainAnim.Progress) * auxInfoRect.z, 0));
+            float offset = S_CloseDirection == Direction::Left ? mainAnim.Progress - 1.0 : 1.0 - mainAnim.Progress;
+            nvg::Translate(vec2(offset * auxInfoRect.z, 0));
         } else {
             nvg::Translate(vec2(0, mainAnim.Progress ));
         }
@@ -982,7 +984,8 @@ class MapInfo_UI : MapInfo_Data {
         nvg::Scale(widthSquish, 1);
         nvg::Scissor(medalsInfoRect.x, medalsInfoRect.y, medalsInfoRect.z, medalsInfoRect.w);
         if (!_minViewWhenRecordsCollapsed) {
-            nvg::Translate(vec2((1.0 - mainAnim.Progress) * medalsInfoRect.z, 0));
+            float offset = S_CloseDirection == Direction::Left ? mainAnim.Progress - 1.0 : 1.0 - mainAnim.Progress;
+            nvg::Translate(vec2(offset * medalsInfoRect.z, 0));
         }
         nvg::BeginPath();
         DrawBgRect(medalsInfoRect.xy, medalsInfoRect.zw);
@@ -1054,7 +1057,8 @@ class MapInfo_UI : MapInfo_Data {
         nvg::Scale(widthSquish, 1);
         nvg::Scissor(topAuxInfoRect.x, topAuxInfoRect.y, topAuxInfoRect.z, topAuxInfoRect.w);
         if (!_minViewWhenRecordsCollapsed) {
-            nvg::Translate(vec2((1.0 - mainAnim.Progress) * topAuxInfoRect.z, 0));
+            float offset = S_CloseDirection == Direction::Left ? mainAnim.Progress - 1.0 : 1.0 - mainAnim.Progress;
+            nvg::Translate(vec2(offset * topAuxInfoRect.z, 0));
         }
 
         nvg::BeginPath();
