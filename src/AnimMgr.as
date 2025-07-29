@@ -49,4 +49,12 @@ class AnimMgr {
             return animOut >= 1.0;
         }
     }
+
+    float GetProgressCoef(Direction dir = Direction::Right) {
+        if (dir == Direction::Right) {
+            return 1.0 - Progress;
+        } else {
+            return Progress - 1.0;
+        }
+    }
 }

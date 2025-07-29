@@ -809,7 +809,7 @@ class MapInfo_UI : MapInfo_Data {
         // if we are not using Compact View
         if (!_minViewWhenRecordsCollapsed) {
             // now, offset everything depending on slider progress
-            nvg::Translate(vec2((1.0 - mainAnim.Progress) * rect.z, 0));
+            nvg::Translate(vec2(mainAnim.GetProgressCoef(S_CloseDirection) * rect.z, 0));
             // that's all we need.
         } else {
             // don't translate left/right
@@ -848,7 +848,7 @@ class MapInfo_UI : MapInfo_Data {
         extraHeightBelowRecords = 0;
         float tmpGap = gap * 2;
         if (_minViewWhenRecordsCollapsed) {
-            tmpGap -= gap * (1.0 - mainAnim.Progress);
+            tmpGap -= gap * mainAnim.GetProgressCoef();
         }
         auxInfoRect = vec4(rect.x + rect.z - recordsWidth, rect.y + guessedHeightPx + tmpGap + rect.w, recordsWidth, rect.w * hScale);
         bool drawTmxId = S_DrawTMXBelowRecords && UploadedToTMX == 1;
@@ -965,7 +965,7 @@ class MapInfo_UI : MapInfo_Data {
         nvg::Scale(widthSquish, 1);
         nvg::Scissor(auxInfoRect.x, auxInfoRect.y, auxInfoRect.z, auxInfoRect.w);
         if (!_minViewWhenRecordsCollapsed) {
-            nvg::Translate(vec2((1.0 - mainAnim.Progress) * auxInfoRect.z, 0));
+            nvg::Translate(vec2(mainAnim.GetProgressCoef(S_CloseDirection) * auxInfoRect.z, 0));
         } else {
             nvg::Translate(vec2(0, mainAnim.Progress ));
         }
@@ -982,7 +982,7 @@ class MapInfo_UI : MapInfo_Data {
         nvg::Scale(widthSquish, 1);
         nvg::Scissor(medalsInfoRect.x, medalsInfoRect.y, medalsInfoRect.z, medalsInfoRect.w);
         if (!_minViewWhenRecordsCollapsed) {
-            nvg::Translate(vec2((1.0 - mainAnim.Progress) * medalsInfoRect.z, 0));
+            nvg::Translate(vec2(mainAnim.GetProgressCoef(S_CloseDirection) * medalsInfoRect.z, 0));
         }
         nvg::BeginPath();
         DrawBgRect(medalsInfoRect.xy, medalsInfoRect.zw);
@@ -1054,7 +1054,7 @@ class MapInfo_UI : MapInfo_Data {
         nvg::Scale(widthSquish, 1);
         nvg::Scissor(topAuxInfoRect.x, topAuxInfoRect.y, topAuxInfoRect.z, topAuxInfoRect.w);
         if (!_minViewWhenRecordsCollapsed) {
-            nvg::Translate(vec2((1.0 - mainAnim.Progress) * topAuxInfoRect.z, 0));
+            nvg::Translate(vec2(mainAnim.GetProgressCoef(S_CloseDirection) * topAuxInfoRect.z, 0));
         }
 
         nvg::BeginPath();
