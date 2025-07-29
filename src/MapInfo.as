@@ -1009,45 +1009,28 @@ class MapInfo_UI : MapInfo_Data {
         float col2Pos = .71;
         float oddMedalsXPos = drawPbs ? col1Pos : col2Pos;
 
-        nvg::FillColor(OrderedMedalColors[0]);
-        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(col1Pos, yPropNextRow), OrderedMedalTimes[0]);
-        if (drawPbs) _DrawPbDelta(col2Pos, yPropNextRow, OrderedMedalTimesUint[0]);
-        if (drawPbs && S_HideMedalsWorseThanPb && PersonalBestMedal == 0) return;
-        if (drawPbs) {
-            yPropNextRow += rowDelta;
-            drawnRows++;
-        }
-        if (S_MaxMedalRowsNb == drawnRows) return;
-
-        nvg::FillColor(OrderedMedalColors[1]);
-        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(oddMedalsXPos, yPropNextRow), OrderedMedalTimes[1]);
-        if (drawPbs) _DrawPbDelta(col2Pos, yPropNextRow, OrderedMedalTimesUint[1]);
-        if (S_HideMedalsWorseThanPb && PersonalBestMedal == 1) return;
-        yPropNextRow += rowDelta;
-        drawnRows++;
-        if (S_MaxMedalRowsNb == drawnRows) return;
-
-        if (!S_DrawOnly2MedalsBelowRecords) {
-            for (uint i = 2; i < OrderedMedalTimes.Length; i += 2) {
-                nvg::FillColor(OrderedMedalColors[i]);
-                nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(col1Pos, yPropNextRow), OrderedMedalTimes[i]);
-                if (drawPbs) _DrawPbDelta(col2Pos, yPropNextRow, OrderedMedalTimesUint[i]);
-                if (drawPbs && S_HideMedalsWorseThanPb && PersonalBestMedal == i) return;
-                if (drawPbs) {
-                    yPropNextRow += rowDelta;
-                    drawnRows++;
-                }
-                if (S_MaxMedalRowsNb == drawnRows) return;
-
-                if (i + 1 < OrderedMedalTimes.Length) {
-                    nvg::FillColor(OrderedMedalColors[i+1]);
-                    nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(oddMedalsXPos, yPropNextRow), OrderedMedalTimes[i+1]);
-                    if (drawPbs) _DrawPbDelta(col2Pos, yPropNextRow, OrderedMedalTimesUint[i+1]);
-                    yPropNextRow += rowDelta;
-                    drawnRows++;
-                    if (S_MaxMedalRowsNb == drawnRows) return;
-                }
+        for (int i = 0; i < int(OrderedMedalTimes.Length); i += 2) {
+            nvg::FillColor(OrderedMedalColors[i]);
+            nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(col1Pos, yPropNextRow), OrderedMedalTimes[i]);
+            if (drawPbs) _DrawPbDelta(col2Pos, yPropNextRow, OrderedMedalTimesUint[i]);
+            if (drawPbs && S_HideMedalsWorseThanPb && PersonalBestMedal == i) return;
+            if (drawPbs) {
+                yPropNextRow += rowDelta;
+                drawnRows++;
             }
+            if (S_MaxMedalRowsNb == drawnRows) return;
+
+            if (i + 1 < int(OrderedMedalTimes.Length)) {
+                nvg::FillColor(OrderedMedalColors[i+1]);
+                nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(oddMedalsXPos, yPropNextRow), OrderedMedalTimes[i+1]);
+                if (drawPbs) _DrawPbDelta(col2Pos, yPropNextRow, OrderedMedalTimesUint[i+1]);
+                if (S_HideMedalsWorseThanPb && PersonalBestMedal == i+1) return;
+                yPropNextRow += rowDelta;
+                drawnRows++;
+                if (S_MaxMedalRowsNb == drawnRows) return;
+            }
+
+            if (i == 0 && S_DrawOnly2MedalsBelowRecords) return;
         }
     }
 
