@@ -1114,7 +1114,7 @@ class MapInfo_UI : MapInfo_Data {
         bool drawOverBLS = (bls !is null && bls.Enabled) || (sls !is null && sls.Enabled);
 
         vec2 screen = vec2(Draw::GetWidth(), Math::Max(1, Draw::GetHeight()));
-        float fs = drawOverBLS ? 40.0 : (fontProp * screen.y);
+        float fs = (fontProp * screen.y);
         float yTop = screen.y * S_LoadingScreenYOffsetPct / 100.0;
         float gap = fs / 4.0;
         // 0.069 = 100/1440
@@ -1152,7 +1152,7 @@ class MapInfo_UI : MapInfo_Data {
 
         for (uint i = 0; i < lines.Length; i++) {
             if (drawOverBLS) {
-                dl.AddText(pos, vec4(1,1,1,1), lines[i], g_ImguiFont);
+                dl.AddText(pos, vec4(1,1,1,1), lines[i], g_ImguiFont, fs);
             } else {
                 if (i == 0 && NvgName !is null) NvgName.Draw(pos, vec3(1, 1, 1), fs, 1.0);
                 else nvg::Text(pos, lines[i]);
