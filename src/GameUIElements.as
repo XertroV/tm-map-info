@@ -198,7 +198,7 @@ class RecordsMLDetector : ManialinkDetector {
                 nbRecordsShown++;
             }
         }
-        return (frameRecords !is null && frameRecords.Visible);
+        return (frameRecords !is null && IsVisibleAndParentsToo(frameRecords));
     }
 
     float GuessHeight(MapInfo_Data@ mapInfo) override {
@@ -282,6 +282,7 @@ class ManialinkDetector {
 
     // for overriding
     void FindExtraAfterMainEl() {}
+    // if this returns false => IsElementVisible returns false
     bool ExtraAfterIsVisible() { return true; }
 
     vec2 mainFrameAbsPos;
@@ -301,7 +302,7 @@ class ManialinkDetector {
         if (MainFrame is null) return false;
         mainFrameAbsPos = MainFrame.AbsolutePosition_V3 + AbsPositionOffset;
         if (!MainFrame.Visible) return false;
-        if (hasSlideFrame && (SlideFrame is null || !SlideFrame.Visible)) return false;
+        if (hasSlideFrame && (SlideFrame is null || !IsVisibleAndParentsToo(SlideFrame))) return false;
 
         if (!ParentsNullOrVisible(MainFrame, 7)) return false;
         // scale customized by some dedicated servers
@@ -461,6 +462,11 @@ bool IsUISequencePlayingOrFinish(CGamePlaygroundUIConfig::EUISequence uiSeq) {
         || uiSeq == CGamePlaygroundUIConfig::EUISequence::Finish
         || (S_DEV_AllowIntro && (uiSeq == CGamePlaygroundUIConfig::EUISequence::Intro || uiSeq == CGamePlaygroundUIConfig::EUISequence::RollingBackgroundIntro))
         ;
+}
+
+bool IsVisibleAndParentsToo(CGameManialinkControl@ el) {
+    if (el is null || !el.Visible) return false;
+    return ParentsNullOrVisible(el, 99);
 }
 
 bool ParentsNullOrVisible(CGameManialinkControl@ el, uint nbParentsToCheck = 1) {
