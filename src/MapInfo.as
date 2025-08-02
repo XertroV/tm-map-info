@@ -877,13 +877,20 @@ class MapInfo_UI : MapInfo_Data {
 
         hScale = 0.6;
         nvg::FontSize(fs * hScale);
-        float nbRows = (S_DrawOnly2MedalsBelowRecords ? 1. : Math::Ceil(float(OrderedMedalTimes.Length) / 2.));
+        // start copy to _Draw_MBR_Inner
         bool drawPbs = S_ShowPbDeltaToMedals && PersonalBestTime > 0;
         float pbMult = drawPbs ? 2.0 : 1.0;
+        float nbRows = (S_DrawOnly2MedalsBelowRecords ? 1. : float(OrderedMedalTimes.Length) / 2.0);
         nbRows *= pbMult;
-        if (drawPbs && S_HideMedalsWorseThanPb) nbRows = Math::Min(float(PersonalBestMedal + 1), nbRows);
-        nbRows = Math::Min(nbRows, S_MaxMedalRowsNb);
+        nbRows = Math::Ceil(nbRows);
+        if (S_HideMedalsWorseThanPb) {
+            if (drawPbs) nbRows = Math::Clamp(Math::Ceil(float(PersonalBestMedal + 1)), 1., nbRows);
+            else nbRows = Math::Clamp(Math::Ceil(float(PersonalBestMedal + 1) / 2.), 1., nbRows);
+        }
+        nbRows = Math::Min(nbRows, float(S_MaxMedalRowsNb));
+        // end copy to _Draw_MBR_Inner
         float medalsHeight = nbRows * (rect.w * hScale - gap) + gap;
+        _DBG_MapInfo_Draw_Last_nbRows = nbRows;
 
         medalsInfoRect = vec4(auxInfoRect.x, auxInfoRect.y, recordsWidth, medalsHeight);
         if (S_DrawMedalsBelowRecords || S_DrawOnly2MedalsBelowRecords) {
@@ -1014,11 +1021,20 @@ class MapInfo_UI : MapInfo_Data {
         float topOffset = 0.025;
         uint drawnRows = 0;
 
-        float nbRows = (S_DrawOnly2MedalsBelowRecords ? 1. : Math::Ceil(float(OrderedMedalTimes.Length) / 2.0));
+
+        // start copied from Draw
         bool drawPbs = S_ShowPbDeltaToMedals && PersonalBestTime > 0;
-        nbRows *= drawPbs ? 2.0 : 1.0;
-        if (drawPbs && S_HideMedalsWorseThanPb) nbRows = Math::Min(float(PersonalBestMedal + 1), nbRows);
-        nbRows = Math::Max(1.0, Math::Min(nbRows, S_MaxMedalRowsNb));
+        float pbMult = drawPbs ? 2.0 : 1.0;
+        float nbRows = (S_DrawOnly2MedalsBelowRecords ? 1. : float(OrderedMedalTimes.Length) / 2.0);
+        nbRows *= pbMult;
+        nbRows = Math::Ceil(nbRows);
+        if (S_HideMedalsWorseThanPb) {
+            if (drawPbs) nbRows = Math::Clamp(Math::Ceil(float(PersonalBestMedal + 1)), 1., nbRows);
+            else nbRows = Math::Clamp(Math::Ceil(float(PersonalBestMedal + 1) / 2.), 1., nbRows);
+        }
+        nbRows = Math::Min(nbRows, float(S_MaxMedalRowsNb));
+        // end copied from Draw
+
         float rowDelta = (1.0 - (topBottomPad * 2. + topOffset)) / (nbRows);
         float yPropNextRow = topBottomPad + topOffset + rowDelta / 2.0;
         // float yPropFirstRow = S_DrawOnly2MedalsBelowRecords ? (.5 + .025) : (.28 + .025);
@@ -1441,6 +1457,7 @@ class MapInfo_UI : MapInfo_Data {
                 DebugTableRowUint("BronzeScore", BronzeScore);
                 DebugTableRowUint("ChampionScore", ChampionScore);
                 DebugTableRowUint("WarriorScore", WarriorScore);
+                DebugTableRowUint("OrderedMedalTimes.Length", OrderedMedalTimes.Length);
 
                 DebugTableRowInt("UploadedToNadeo", UploadedToNadeo);
                 DebugTableRowButton("TMioButton", TMioButton);
@@ -1498,6 +1515,7 @@ class MapInfo_UI : MapInfo_Data {
         DebugTableRowBool("> shouldDrawUI", _DBG_MapInfo_Draw_Last_shouldDrawUI);
         DebugTableRowBool("> closed", _DBG_MapInfo_Draw_Last_closed);
         DebugTableRowInt("[F] MapInfo::Draw() Drawing", _DBG_Nb_MapInfo_Draw_Drawing);
+        DebugTableRowFloat("> nbRows", _DBG_MapInfo_Draw_Last_nbRows);
     }
 
     void DebugTableRows_MLDetectorDebug() {
