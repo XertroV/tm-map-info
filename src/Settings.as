@@ -62,6 +62,9 @@ bool S_EnableDuringCotdQuali = true;
 #endif
 bool S_EnableDuringKO = false;
 
+[Setting category="Modes" name="Show Map Info in Match Making?" description="Will appear near Live Rankings in the top left."]
+bool S_EnableDuringMM = true;
+
 
 
 [Setting category="Medal Times" name="Show medal times below records"]
@@ -160,8 +163,15 @@ bool SP_ShowTMXMapTags = true;
 
 
 #if DEV
+
 [Setting category="[DEV] Debug" name="Local Dev Server"]
 bool S_LocalDev = true;
+[Setting category="[DEV] Debug" name="Show during Intro"]
+bool S_DEV_AllowIntro = true;
+
 #else
+
 bool S_LocalDev = false;
+bool S_DEV_AllowIntro = false;
+
 #endif

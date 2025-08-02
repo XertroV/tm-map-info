@@ -22,6 +22,14 @@ float RecordFrameWidth = 61.0;
 float RecordFrameStartX = 0.0;
 float RecordFrameHeight = 50; // todo
 
+const string MMTeamsPageName = "UIModule_TMWC2023_LiveRanking";
+const string MMTeamsFrame = "TMWC2023_LiveRanking";
+const string MMTeamsSlideFrameId = "frame-anim-visibility";
+float MMTeamsFrameWidth = 17.160 + 48.840; // = 66
+float MMTeamsFrameStartX = 0.0;
+// was: 8 + 6.5*4; but the 8 is 'live height' and is negative offset. If we accounted for this we'd be off the top of the screen.
+float MMTeamsFrameHeight = 6.500 * 4.; // 8 + 26 = 34
+
 // button-hide, frame-content, COTDQualifications_QualificationsProgress
 
 class ManialinkDetectorGroup {
@@ -137,6 +145,18 @@ class KnockoutMLDetector : ManialinkDetector {
     }
     float GuessHeight(MapInfo_Data@ mapInfo) override {
         return KOFrameHeight;
+    }
+}
+
+
+class MMTeamsMLDetector : ManialinkDetector {
+    MMTeamsMLDetector() {
+        super(MMTeamsPageName, MMTeamsFrame);
+        this.SetSlideFrame(MMTeamsSlideFrameId, MMTeamsFrameWidth, MMTeamsFrameStartX);
+        fullWidthPxOnBaseRes = MMTeamsFrameWidth * 2560.0 / 320.0;
+    }
+    float GuessHeight(MapInfo_Data@ mapInfo) override {
+        return MMTeamsFrameHeight;
     }
 }
 
@@ -382,6 +402,9 @@ class ManialinkDetector {
         }
         return foundLayer;
     }
+    uint get__lastUILayerIndex() {
+        return lastUILayerIndex;
+    }
 
     bool IsUILayerMatching(CGameUILayer@ layer) {
         log_debug('checking layer');
@@ -428,12 +451,14 @@ bool IsGoodUISequence(CGamePlaygroundUIConfig::EUISequence uiSeq) {
         || uiSeq == CGamePlaygroundUIConfig::EUISequence::Finish
         || uiSeq == CGamePlaygroundUIConfig::EUISequence::EndRound
         || uiSeq == CGamePlaygroundUIConfig::EUISequence::UIInteraction
+        || (S_DEV_AllowIntro && (uiSeq == CGamePlaygroundUIConfig::EUISequence::Intro || uiSeq == CGamePlaygroundUIConfig::EUISequence::RollingBackgroundIntro))
         ;
 }
 
 bool IsUISequencePlayingOrFinish(CGamePlaygroundUIConfig::EUISequence uiSeq) {
     return uiSeq == CGamePlaygroundUIConfig::EUISequence::Playing
         || uiSeq == CGamePlaygroundUIConfig::EUISequence::Finish
+        || (S_DEV_AllowIntro && (uiSeq == CGamePlaygroundUIConfig::EUISequence::Intro || uiSeq == CGamePlaygroundUIConfig::EUISequence::RollingBackgroundIntro))
         ;
 }
 

@@ -79,6 +79,7 @@ class MapInfo_Data : MapInfo::Data {
 
     bool isCotdQuali = false;
     bool isKoRounds = false;
+    bool isMmTeams = false;
     bool isNormalRecords = true;
 
     ManialinkDetectorGroup@ mlDetector = null;
@@ -105,15 +106,17 @@ class MapInfo_Data : MapInfo::Data {
         isCotdQuali = si.CurGameModeStr == "TM_COTDQualifications_Online"
             || si.ClientUIRootModuleUrl.EndsWith("COTDQualifications.Script.txt");
         isKoRounds = si.CurGameModeStr.StartsWith("TM_Knockout");
-        isNormalRecords = !isCotdQuali && !isKoRounds;
+        isMmTeams = si.CurGameModeStr == "TM_TMWTMatchmaking_Online";
+        isNormalRecords = !isCotdQuali && !isKoRounds && !isMmTeams;
         if (isNormalRecords) @mlDetector = ManialinkDetectorGroup().Add(RecordsMLDetector());
         else if (S_EnableDuringCotdQuali && isCotdQuali) @mlDetector = ManialinkDetectorGroup().Add(COTDQualiPMLDetector(), COTDQualiRankingMLDetector());
         else if (S_EnableDuringKO && isKoRounds) @mlDetector = ManialinkDetectorGroup().Add(KnockoutMLDetector());
+        else if (S_EnableDuringMM && isMmTeams) @mlDetector = ManialinkDetectorGroup().Add(MMTeamsMLDetector());
         // make sure we have something here since it is expected to be non-null
         if (mlDetector is null) {
             @mlDetector = ManialinkDetectorGroup().Add(RecordsMLDetector());
         }
-        print("Initialize ML Finder, cotd: " + isCotdQuali + ", KO: " + isKoRounds + ", normal: " + isNormalRecords);
+        print("Initialize ML Finder, cotd: " + isCotdQuali + ", KO: " + isKoRounds + ", MM: " + isMmTeams + ", normal: " + isNormalRecords);
     }
 
     void Shutdown() {
@@ -515,7 +518,7 @@ class MapInfo_Data : MapInfo::Data {
         // so probs best to check that (no string operations).
         auto cmap = GetApp().Network.ClientManiaAppPlayground;
         if (cmap is null) return false;
-        for (uint i = 2; i < uint(Math::Min(8, cmap.UILayers.Length)); i++) {
+        for (uint i = 2; i < uint(Math::Min(11, cmap.UILayers.Length)); i++) {
             auto layer = cmap.UILayers[i];
             if (layer !is null && layer.Type == CGameUILayer::EUILayerType::ScoresTable) {
                 return layer.LocalPage !is null && layer.LocalPage.MainFrame !is null && layer.LocalPage.MainFrame.Visible;
@@ -581,6 +584,7 @@ class MapInfo_Data : MapInfo::Data {
                 && (S_MinViewWhenRecordsCollapsed || mlDetector.isElementVisible)
                 && (!isKoRounds || S_EnableDuringKO)
                 && (!isCotdQuali || S_EnableDuringCotdQuali)
+                && (!isMmTeams || S_EnableDuringMM)
                 && !ScoreTableVisible()
                 && !SoloMenuOpen()
                 ;
@@ -650,7 +654,7 @@ class MapInfo_UI : MapInfo_Data {
     vec2 recordsTL;
     // vec2 recordsFullSize;
     float widthSquish;
-    float recordsGuessedHeight;
+    float recordsGuessedHeight; // in pct of screen height
     float extraHeightBelowRecords = 0;
     vec4 auxInfoRect;
     vec4 topAuxInfoRect;
@@ -708,6 +712,7 @@ class MapInfo_UI : MapInfo_Data {
     bool _hasBeenOpenAfterMenu = false;
 
     void Draw() {
+        _DBG_Nb_MapInfo_Draw++;
         CheckLoadCountryFlag();
 
         if (!LoadedNbPlayers && Time::Now - LoadingStartedAt < 5000) return;
@@ -717,9 +722,12 @@ class MapInfo_UI : MapInfo_Data {
         // auto ps = cast<CSmArenaRulesMode>(GetApp().PlaygroundScript);
         bool closed = !S_ShowMapInfo
             || !_GameUIVisible;
-        bool shouldDrawUI = !closed && ShouldDrawUI;
+
+        bool shouldDrawUI_Pre = ShouldDrawUI;
+        bool _IsGoodUiSeq = false;
+        bool shouldDrawUI = !closed && shouldDrawUI_Pre;
         shouldDrawUI = shouldDrawUI && !(
-               cmap is null || !IsGoodUISequence(cmap.UI.UISequence)
+               cmap is null || !(_IsGoodUiSeq = IsGoodUISequence(cmap.UI.UISequence))
             || pgcsa is null || pgcsa.IsInGameMenuDisplayed
             || int(app.LoadProgress.State) > 0 // Disabled=0, Displayed=1
         );
@@ -740,9 +748,18 @@ class MapInfo_UI : MapInfo_Data {
         if (closed) {
             lastMapInfoSize = vec2();
         }
+
+        _DBG_MapInfo_Draw_Last_IsGoodUiSeq = _IsGoodUiSeq;
+        _DBG_MapInfo_Draw_Last_shouldDrawUI_Pre = shouldDrawUI_Pre;
+        _DBG_MapInfo_Draw_Last_shouldDrawUI = shouldDrawUI;
+        _DBG_MapInfo_Draw_Last_closed = closed;
+        _DBG_Nb_MapInfo_Draw_C1++;
+
         if (!mainAnim.Update(!closed, mlDetector.slideProgress) && !shouldDrawUI) {
             return;
         }
+
+        _DBG_Nb_MapInfo_Draw_Drawing++;
 
         // update flag to control compact view after pause menu
         if (!_hasBeenOpenAfterMenu && (mainAnim.IsDone || (!mlDetector.isElementVisible && S_MinViewWhenRecordsCollapsed))) {
@@ -1383,16 +1400,22 @@ class MapInfo_UI : MapInfo_Data {
     }
 
 
-
     void Draw_DebugUI() {
         if (!S_ShowDebugUI) return;
 
         UI::SetNextWindowSize(800, 500, UI::Cond::FirstUseEver);
         if (UI::Begin("\\$8f0" + Icons::Map + "\\$z Map Info -- Debug", S_ShowDebugUI, UI::WindowFlags::None)) {
+            dbg_ShowCalls = UI::Checkbox("Show function calls", dbg_ShowCalls);
+            UI::SameLine();
+            dbg_ShowMlDetectorDebug = UI::Checkbox("Show ML Detector Debug", dbg_ShowMlDetectorDebug);
+
             if (UI::BeginTable("mapInfoDebug", 3, UI::TableFlags::SizingFixedFit)) {
                 UI::TableSetupColumn("key", UI::TableColumnFlags::WidthFixed);
                 UI::TableSetupColumn("value", UI::TableColumnFlags::WidthStretch);
                 UI::TableSetupColumn("copy", UI::TableColumnFlags::WidthFixed);
+
+                if (dbg_ShowCalls) DebugTableRows_FunctionCalls();
+                if (dbg_ShowMlDetectorDebug) DebugTableRows_MLDetectorDebug();
 
                 DebugTableRowStr("uid", uid);
                 DebugTableRowStr("author", author);
@@ -1463,6 +1486,44 @@ class MapInfo_UI : MapInfo_Data {
         UI::End();
     }
 
+    void DebugTableRows_FunctionCalls() {
+        DebugTableRowInt("[F] MapInfo::Draw()", _DBG_Nb_MapInfo_Draw);
+        DebugTableRowInt("[F] MapInfo::Draw() Check 1", _DBG_Nb_MapInfo_Draw_C1);
+        DebugTableRowBool("> _GameUIVisible", _GameUIVisible);
+        DebugTableRowBool("> isMmTeams || S_EnableDuringMM", isMmTeams || S_EnableDuringMM);
+        DebugTableRowBool("> not ScoreTableVisible", !ScoreTableVisible());
+        DebugTableRowBool("> not SoloMenuOpen", !SoloMenuOpen());
+        DebugTableRowBool("> shouldDrawUI_Pre", _DBG_MapInfo_Draw_Last_shouldDrawUI_Pre);
+        DebugTableRowBool("> IsGoodUiSeq", _DBG_MapInfo_Draw_Last_IsGoodUiSeq);
+        DebugTableRowBool("> shouldDrawUI", _DBG_MapInfo_Draw_Last_shouldDrawUI);
+        DebugTableRowBool("> closed", _DBG_MapInfo_Draw_Last_closed);
+        DebugTableRowInt("[F] MapInfo::Draw() Drawing", _DBG_Nb_MapInfo_Draw_Drawing);
+    }
+
+    void DebugTableRows_MLDetectorDebug() {
+        if (mlDetector is null) {
+            DebugTableRowStr("ML Detector", "null");
+            return;
+        }
+
+        DebugTableRowBool("[ML] isElementVisible", mlDetector.isElementVisible);
+        DebugTableRowFloat("[ML] mainFrameAbsScale", mlDetector.mainFrameAbsScale);
+        DebugTableRowStr("[ML] mainFrameAbsPos", mlDetector.mainFrameAbsPos.ToString());
+        DebugTableRowFloat("[ML] fullWidthPxOnBaseRes", mlDetector.fullWidthPxOnBaseRes);
+
+        DebugTableRowStr("[ML] Detectors", mlDetector.detectors.Length + " detectors");
+        for (uint i = 0; i < mlDetector.detectors.Length; i++) {
+            auto detector = mlDetector.detectors[i];
+            string p = "[ML." + i + "] ";
+            DebugTableRowStr(p + "mainFrameAbsPos", detector.mainFrameAbsPos.ToString());
+            DebugTableRowFloat(p + "mainFrameAbsScale", detector.mainFrameAbsScale);
+            DebugTableRowBool(p + "IsSafeToCheckUI", detector.IsSafeToCheckUI());
+            DebugTableRowBool(p + "isElementVisible", detector.isElementVisible);
+            DebugTableRowUint(p + "lastUILayerIndex", detector._lastUILayerIndex);
+            DebugTableRowStr("-------", "-------");
+        }
+    }
+
     void DebugTableRowStr(const string &in key, const string &in value) {
         UI::PushID(key);
 
@@ -1476,10 +1537,13 @@ class MapInfo_UI : MapInfo_Data {
 
         UI::PopID();
     }
-    void DebugTableRowInt(const string &in key, const int &in value) {
+    void DebugTableRowInt(const string &in key, const int64 &in value) {
         DebugTableRowStr(key, tostring(value));
     }
-    void DebugTableRowUint(const string &in key, const uint &in value) {
+    void DebugTableRowUint(const string &in key, const uint64 &in value) {
+        DebugTableRowStr(key, tostring(value));
+    }
+    void DebugTableRowFloat(const string &in key, const float &in value) {
         DebugTableRowStr(key, tostring(value));
     }
     void DebugTableRowBool(const string &in key, bool value) {
@@ -1492,3 +1556,7 @@ class MapInfo_UI : MapInfo_Data {
         DebugTableRowStr(key, value is null ? "null" : Json::Write(value));
     }
 }
+
+
+bool dbg_ShowCalls = false;
+bool dbg_ShowMlDetectorDebug = false;
