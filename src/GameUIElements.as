@@ -452,7 +452,7 @@ bool IsGoodUISequence(CGamePlaygroundUIConfig::EUISequence uiSeq) {
     return uiSeq == CGamePlaygroundUIConfig::EUISequence::Playing
         || uiSeq == CGamePlaygroundUIConfig::EUISequence::Finish
         || uiSeq == CGamePlaygroundUIConfig::EUISequence::EndRound
-        || uiSeq == CGamePlaygroundUIConfig::EUISequence::UIInteraction
+        // || uiSeq == CGamePlaygroundUIConfig::EUISequence::UIInteraction // remove this for solo > pause menu > view records
         || (S_DEV_AllowIntro && (uiSeq == CGamePlaygroundUIConfig::EUISequence::Intro || uiSeq == CGamePlaygroundUIConfig::EUISequence::RollingBackgroundIntro))
         ;
 }
