@@ -109,7 +109,7 @@ class MapInfo_Data : MapInfo::Data {
         isMmTeams = si.CurGameModeStr == "TM_TMWTMatchmaking_Online";
         isNormalRecords = !isCotdQuali && !isKoRounds && !isMmTeams;
         if (isNormalRecords) @mlDetector = ManialinkDetectorGroup().Add(RecordsMLDetector());
-        else if (S_EnableDuringCotdQuali && isCotdQuali) @mlDetector = ManialinkDetectorGroup().Add(COTDQualiPMLDetector(), COTDQualiRankingMLDetector());
+        else if (S_EnableDuringCotdQuali && isCotdQuali) @mlDetector = ManialinkDetectorGroup().Add(COTDQualiPMLDetector(), COTDQualiRankingMLDetector(), RecordsMLDetector());
         else if (S_EnableDuringKO && isKoRounds) @mlDetector = ManialinkDetectorGroup().Add(KnockoutMLDetector());
         else if (S_EnableDuringMM && isMmTeams) @mlDetector = ManialinkDetectorGroup().Add(MMTeamsMLDetector());
         // make sure we have something here since it is expected to be non-null

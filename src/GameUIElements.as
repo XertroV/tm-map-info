@@ -40,9 +40,10 @@ class ManialinkDetectorGroup {
         detectors.InsertLast(d);
         return this;
     }
-    ManialinkDetectorGroup@ Add(ManialinkDetector@ d, ManialinkDetector@ d2) {
+    ManialinkDetectorGroup@ Add(ManialinkDetector@ d, ManialinkDetector@ d2, ManialinkDetector@ d3 = null) {
         detectors.InsertLast(d);
         detectors.InsertLast(d2);
+        if (d3 !is null) detectors.InsertLast(d3);
         return this;
     }
 
