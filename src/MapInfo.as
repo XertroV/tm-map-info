@@ -860,13 +860,13 @@ class MapInfo_UI : MapInfo_Data {
 
         hScale = 0.6;
         nvg::FontSize(fs * hScale);
-        float nbRows = (S_DrawOnly2MedalsBelowRecords ? 1. : Math::Ceil(OrderedMedalTimes.Length / 2));
+        float nbRows = (S_DrawOnly2MedalsBelowRecords ? 1. : Math::Ceil(float(OrderedMedalTimes.Length) / 2.));
         bool drawPbs = S_ShowPbDeltaToMedals && PersonalBestTime > 0;
         float pbMult = drawPbs ? 2.0 : 1.0;
         nbRows *= pbMult;
         if (drawPbs && S_HideMedalsWorseThanPb) nbRows = Math::Min(float(PersonalBestMedal + 1), nbRows);
         nbRows = Math::Min(nbRows, S_MaxMedalRowsNb);
-        float medalsHeight = nbRows * rect.w * hScale;
+        float medalsHeight = nbRows * (rect.w * hScale - gap) + gap;
 
         medalsInfoRect = vec4(auxInfoRect.x, auxInfoRect.y, recordsWidth, medalsHeight);
         if (S_DrawMedalsBelowRecords || S_DrawOnly2MedalsBelowRecords) {
@@ -997,7 +997,7 @@ class MapInfo_UI : MapInfo_Data {
         float topOffset = 0.025;
         uint drawnRows = 0;
 
-        float nbRows = (S_DrawOnly2MedalsBelowRecords ? 1. : Math::Ceil(OrderedMedalTimes.Length / 2));
+        float nbRows = (S_DrawOnly2MedalsBelowRecords ? 1. : Math::Ceil(float(OrderedMedalTimes.Length) / 2.0));
         bool drawPbs = S_ShowPbDeltaToMedals && PersonalBestTime > 0;
         nbRows *= drawPbs ? 2.0 : 1.0;
         if (drawPbs && S_HideMedalsWorseThanPb) nbRows = Math::Min(float(PersonalBestMedal + 1), nbRows);

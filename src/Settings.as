@@ -83,7 +83,7 @@ bool S_ShowPbDeltaToMedals = true;
 bool S_HideMedalsWorseThanPb = true;
 
 [Setting category="Medal Times" name="Max. Medal Rows to Show" min=1 max=6 description="If limited to 1, it will only show CM or AT with PB deltas on, and CM + AT or AT + Gold otherwise."]
-uint S_MaxMedalRowsNb = 6;
+uint S_MaxMedalRowsNb = 4;
 
 [Setting category="Medal Times" name="Negative PB Delta Color" color]
 vec4 S_DeltaColorNegative = vec4(0.170f, 0.463f, 0.943f, 1.000f);
@@ -155,3 +155,13 @@ bool SP_ShowTMXAwards = true;
 
 [Setting category="Persistent Window" name="Show TMX Tags"]
 bool SP_ShowTMXMapTags = true;
+
+
+
+
+#if DEV
+[Setting category="[DEV] Debug" name="Local Dev Server"]
+bool S_LocalDev = true;
+#else
+bool S_LocalDev = false;
+#endif
