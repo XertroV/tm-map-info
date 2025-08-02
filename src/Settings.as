@@ -111,8 +111,12 @@ bool S_RefreshMedalColors = false;
 [Setting category="Loading Screen" name="Show map info on loading screen"]
 bool S_ShowLoadingScreenInfo = true;
 
+[Setting category="Loading Screen" name="Prefer draw using NVG (old style)" description="Draw loading screen using NVG provided you don't have a Loading Screen plugin."]
+bool S_LoadingScreenUseNVG = false;
+
 [Setting category="Loading Screen" name="Loading Screen Y Offset (%)" min=0 max=90]
 float S_LoadingScreenYOffsetPct = 8.0;
+
 
 
 [Setting category="Side Panel" name="Show author flags"]

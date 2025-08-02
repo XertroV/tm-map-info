@@ -1134,7 +1134,8 @@ class MapInfo_UI : MapInfo_Data {
 
         auto bls = Meta::GetPluginFromID("BetterLoadingScreen");
         auto sls = Meta::GetPluginFromID("static-loading-screen");
-        bool drawOverBLS = (bls !is null && bls.Enabled) || (sls !is null && sls.Enabled);
+        bool drawUsingImGUI = (bls !is null && bls.Enabled) || (sls !is null && sls.Enabled);
+        if (!S_LoadingScreenUseNVG) drawUsingImGUI = true;
 
         vec2 screen = vec2(Draw::GetWidth(), Math::Max(1, Draw::GetHeight()));
         float fs = (fontProp * screen.y);
@@ -1148,7 +1149,7 @@ class MapInfo_UI : MapInfo_Data {
 
         // thumbnail cacls
         float thumbH = height - gap * 2.0;
-        bool willDrawThumbnail = (!drawOverBLS && ThumbnailTexture !is null) || (drawOverBLS && UI_ThumbnailTexture !is null);
+        bool willDrawThumbnail = (!drawUsingImGUI && ThumbnailTexture !is null) || (drawUsingImGUI && UI_ThumbnailTexture !is null);
         vec2 imgSize = vec2(thumbH, thumbH);
         vec2 imgPos = vec2(screen.x - imgSize.x - (Math::Max(0, screen.x / screen.y - 1.77777777) / 2. + 0.069) * screen.y, yTop + gap);
 
@@ -1156,7 +1157,7 @@ class MapInfo_UI : MapInfo_Data {
         UI::DrawList@ dl = UI::GetForegroundDrawList();
 
         // we only use imgui drawList if we have to (BLS installed), otherwise use nvg for performance
-        if (drawOverBLS) {
+        if (drawUsingImGUI) {
             if (g_ImguiFont is null) { // can happen if BLS installed after MapInfo running
                 startnew(LoadImGUIFont);
                 return;
@@ -1174,7 +1175,7 @@ class MapInfo_UI : MapInfo_Data {
         }
 
         for (uint i = 0; i < lines.Length; i++) {
-            if (drawOverBLS) {
+            if (drawUsingImGUI) {
                 dl.AddText(pos, vec4(1,1,1,1), lines[i], g_ImguiFont, fs);
             } else {
                 if (i == 0 && NvgName !is null) NvgName.Draw(pos, vec3(1, 1, 1), fs, 1.0);
@@ -1184,7 +1185,7 @@ class MapInfo_UI : MapInfo_Data {
         }
 
         if (willDrawThumbnail) {
-            if (drawOverBLS) {
+            if (drawUsingImGUI) {
                 dl.AddImage(UI_ThumbnailTexture, imgPos, imgSize);
             } else {
                 DrawTexture(imgPos, imgSize, ThumbnailTexture);
