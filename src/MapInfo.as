@@ -82,6 +82,10 @@ class MapInfo_Data : MapInfo::Data {
     bool isMmTeams = false;
     bool isNormalRecords = true;
 
+    bool isStunt = false;
+    bool isPlatform = false;
+    bool isRoyal = false;
+
     ManialinkDetectorGroup@ mlDetector = null;
 
     MapInfo_Data() {
@@ -95,6 +99,7 @@ class MapInfo_Data : MapInfo::Data {
         author = map.AuthorNickName;
         AuthorDisplayName = map.MapInfo.AuthorNickName;
         AuthorCountryFlag = map.AuthorZoneIconUrl.SubStr(map.AuthorZoneIconUrl.Length - 7);
+        SetMode(map.MapType);
         GetMapInfoFromMap();
         InitializeMLFinder();
         StartInitializationCoros();
@@ -146,6 +151,11 @@ class MapInfo_Data : MapInfo::Data {
 
     void GetPersonalBest() {
         while (!SHUTDOWN) {
+            if (isRoyal) {
+                // Royal maps don't store PBs
+                return;
+            }
+
             auto app = GetApp();
             auto cmap = app.Network.ClientManiaAppPlayground;
             if (cmap is null) {
@@ -156,7 +166,10 @@ class MapInfo_Data : MapInfo::Data {
             auto userId = app.UserManagerScript.Users[0].Id;
 
             string mode = "TimeAttack";
-            if (HasClones) {
+
+            if (isStunt || isPlatform) {
+                mode = tostring(GameMode);
+            } else if (HasClones) {
                 mode += "Clone";
             };
 
@@ -173,11 +186,28 @@ class MapInfo_Data : MapInfo::Data {
     int GetMedalForTime(uint time) {
         auto len = OrderedMedalTimesUint.Length;
         for (uint i = 0; i < len; i++) {
-            if (time <= OrderedMedalTimesUint[i]) {
+            if (isStunt && time >= OrderedMedalTimesUint[i]) {
+                return i;
+            } else if (!isStunt && time <= OrderedMedalTimesUint[i]) {
                 return i;
             }
         }
         return 999;
+    }
+
+    void SetMode(const string &in mapType) {
+        if (mapType == 'TrackMania\\TM_Stunt') {
+            isStunt = true;
+            GameMode = MapInfo::GameModes::Stunt;
+        } else if (mapType == 'TrackMania\\TM_Platform') {
+            isPlatform = true;
+            GameMode = MapInfo::GameModes::Platform;
+        } else if (mapType == "TrackMania\\TM_Royal") {
+            isRoyal = true;
+            GameMode = MapInfo::GameModes::Royal;
+        } else {
+            GameMode = MapInfo::GameModes::Race;
+        }
     }
 
     void RefreshTOTDStatus() {
@@ -275,12 +305,18 @@ class MapInfo_Data : MapInfo::Data {
     }
 
     void SetMedalTimeStrs() {
-        AuthorTimeStr = Time::Format(AuthorScore);
-        GoldTimeStr = Time::Format(GoldScore);
-        SilverTimeStr = Time::Format(SilverScore);
-        BronzeTimeStr = Time::Format(BronzeScore);
+        AuthorTimeStr = FormatTime(AuthorScore);
+        GoldTimeStr = FormatTime(GoldScore);
+        SilverTimeStr = FormatTime(SilverScore);
+        BronzeTimeStr = FormatTime(BronzeScore);
         OrderedMedalTimes = {AuthorTimeStr, GoldTimeStr, SilverTimeStr, BronzeTimeStr};
         OrderedMedalTimesUint = {AuthorScore, GoldScore, SilverScore, BronzeScore};
+    }
+
+    string FormatTime(uint time, bool forceMinutes = true) {
+        if (isStunt) return tostring(time) + " pts";
+        if (isPlatform) return tostring(time);
+        return Time::Format(time, true, forceMinutes);
     }
 
     void CheckChampionMedal() {
@@ -291,7 +327,7 @@ class MapInfo_Data : MapInfo::Data {
         while (ChampionScore == 0 && Time::Now - startChampCheck < 30000 && !SHUTDOWN) {
             ChampionScore = ChampionMedals::GetCMTime();
             if (ChampionScore > 0) {
-                ChampionTimeStr = Time::Format(ChampionScore);
+                ChampionTimeStr = FormatTime(ChampionScore);
                 OrderedMedalTimesUint.InsertAt(0, ChampionScore);
                 OrderedMedalTimes.InsertAt(0, ChampionTimeStr);
                 OrderedMedalColors.InsertAt(0, S_MedalColorChampion);
@@ -311,7 +347,7 @@ class MapInfo_Data : MapInfo::Data {
         while (WarriorScore == 0 && Time::Now - startWarriorCheck < 30000 && !SHUTDOWN) {
             WarriorScore = WarriorMedals::GetWMTime();
             if (WarriorScore > 0) {
-                WarriorTimeStr = Time::Format(WarriorScore);
+                WarriorTimeStr = FormatTime(WarriorScore);
                 uint index = ChampionScore > 0 && ChampionScore <= WarriorScore ? 1 : 0;
                 OrderedMedalTimesUint.InsertAt(index, WarriorScore);
                 OrderedMedalTimes.InsertAt(index, WarriorTimeStr);
@@ -369,7 +405,7 @@ class MapInfo_Data : MapInfo::Data {
         WorstTime = resp.Get('last_highest_score', 0);
 
         UpdateNbPlayersString();
-        WorstTimeStr = Time::Format(WorstTime);
+        WorstTimeStr = FormatTime(WorstTime);
 
         LoadedNbPlayers = true;
         log_trace('MapInfo_Data loaded nb players: ' + NbPlayersStr);
@@ -383,6 +419,14 @@ class MapInfo_Data : MapInfo::Data {
     }
 
     void RefreshMapInfoFromMapMonitorAPI() {
+        if (isPlatform || isRoyal) {
+            log_trace('Game mode doesn\'t support leaderboards. Skipping map monitor call...');
+            NbPlayers = 98765;
+            UpdateNbPlayersString();
+            WorstTimeStr = FormatTime(WorstTime);
+            return;
+        }
+
         auto prevNbPlayers = NbPlayers;
         log_debug('refresh map info pre: ' + prevNbPlayers);
         auto resp = UpdateMapInfoFromMapMonitorAPI(true);
@@ -886,7 +930,7 @@ class MapInfo_UI : MapInfo_Data {
         hScale = 0.6;
         nvg::FontSize(fs * hScale);
         // start copy to _Draw_MBR_Inner
-        bool drawPbs = S_ShowPbDeltaToMedals && PersonalBestTime > 0;
+        bool drawPbs = S_ShowPbDeltaToMedals && PersonalBestTime > -1;
         float pbMult = drawPbs ? 2.0 : 1.0;
         float nbRows = (S_DrawOnly2MedalsBelowRecords ? 1. : float(OrderedMedalTimes.Length) / 2.0);
         nbRows *= pbMult;
@@ -1031,7 +1075,7 @@ class MapInfo_UI : MapInfo_Data {
 
 
         // start copied from Draw
-        bool drawPbs = S_ShowPbDeltaToMedals && PersonalBestTime > 0;
+        bool drawPbs = S_ShowPbDeltaToMedals && PersonalBestTime > -1;
         float pbMult = drawPbs ? 2.0 : 1.0;
         float nbRows = (S_DrawOnly2MedalsBelowRecords ? 1. : float(OrderedMedalTimes.Length) / 2.0);
         nbRows *= pbMult;
@@ -1077,8 +1121,9 @@ class MapInfo_UI : MapInfo_Data {
 
     void _DrawPbDelta(float xPos, float yPropNextRow, uint medalTime) {
         bool isNeg = int(medalTime) < PersonalBestTime;
-        nvg::FillColor(isNeg ? S_DeltaColorPositive : S_DeltaColorNegative);
-        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(xPos, yPropNextRow), (isNeg ? "+" : "-") + Time::Format(Math::Abs(int(PersonalBestTime) - int(medalTime)), true, false));
+        bool positiveColor = isStunt ? !isNeg : isNeg;
+        nvg::FillColor(positiveColor ? S_DeltaColorPositive : S_DeltaColorNegative);
+        nvg::Text(medalsInfoRect.xy + medalsInfoRect.zw * vec2(xPos, yPropNextRow), (isNeg ? "+" : "-") + FormatTime(Math::Abs(int(PersonalBestTime) - int(medalTime)), false));
     }
 
     void Draw_MapNameAuthorAboveRecords(float gap) {
@@ -1450,6 +1495,7 @@ class MapInfo_UI : MapInfo_Data {
                 DebugTableRowStr("NvgName", NvgName.ToString());
                 DebugTableRowStr("MapComment", MapComment);
                 DebugTableRowBool("HasClones", HasClones);
+                DebugTableRowStr("GameMode", tostring(GameMode));
 
                 DebugTableRowStr("AuthorAccountId", AuthorAccountId);
                 DebugTableRowStr("AuthorCurrentName", AuthorCurrentName);

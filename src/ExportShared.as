@@ -1,4 +1,11 @@
 namespace MapInfo {
+    shared enum GameModes {
+        Race,
+        Stunt,
+        Platform,
+        Royal
+    }
+
     shared class Data {
         string uid;
         string author;
@@ -10,6 +17,7 @@ namespace MapInfo {
         string MapComment;
         bool HasMapComment;
         bool HasClones;
+        GameModes GameMode;
 
         string AuthorAccountId = "";
         string AuthorCurrentName = "";
