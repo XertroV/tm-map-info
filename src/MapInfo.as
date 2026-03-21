@@ -661,7 +661,7 @@ class MapInfo_UI : MapInfo_Data {
     vec4 medalsInfoRect;
 
     vec4 UpdateBounds() {
-        screen = vec2(Draw::GetWidth(), Draw::GetHeight());
+        screen = Display::GetSize();
         if (screen.x == 0 || screen.y == 0) screen = baseRes;
         vec2 midPoint = screen / 2.0;
         // if we are <16:9 res, then we get squished width
@@ -1137,7 +1137,7 @@ class MapInfo_UI : MapInfo_Data {
         bool drawUsingImGUI = (bls !is null && bls.Enabled) || (sls !is null && sls.Enabled);
         if (!S_LoadingScreenUseNVG) drawUsingImGUI = true;
 
-        vec2 screen = vec2(Draw::GetWidth(), Math::Max(1, Draw::GetHeight()));
+        vec2 screen = vec2(Display::GetWidth(), Math::Max(1, Display::GetHeight()));
         float fs = (fontProp * screen.y);
         float yTop = screen.y * S_LoadingScreenYOffsetPct / 100.0;
         float gap = fs / 4.0;
