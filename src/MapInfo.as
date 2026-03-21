@@ -224,9 +224,6 @@ class MapInfo_Data : MapInfo::Data {
         // todo: check this works fine in most cases
         // see issue #20 for example of why this should be commented.
 
-        if (AuthorDisplayName != "Nadeo")
-            AuthorCurrentName = NadeoServices::GetDisplayNameAsync(AuthorAccountId);
-
         SetName(info.Name);
         FileName = info.FileName;
         FileUrl = info.FileUrl;
@@ -239,6 +236,9 @@ class MapInfo_Data : MapInfo::Data {
         SilverScore = info.SilverScore;
         BronzeScore = info.BronzeScore;
         SetMedalTimeStrs();
+
+        if (AuthorDisplayName != "Nadeo")
+            AuthorCurrentName = NadeoServices::GetDisplayNameAsync(AuthorAccountId);
 
         LoadedMapData = true;
         log_trace('MapInfo_Data loaded map data');
