@@ -154,7 +154,13 @@ class MapInfo_Data : MapInfo::Data {
             }
             auto scoreMgr = cmap.ScoreMgr;
             auto userId = app.UserManagerScript.Users[0].Id;
-            PersonalBestTime = scoreMgr.Map_GetRecord_v2(userId, uid, "PersonalBest", "", "TimeAttack", "");
+
+            string mode = "TimeAttack";
+            if (HasClones) {
+                mode += "Clone";
+            };
+
+            PersonalBestTime = scoreMgr.Map_GetRecord_v2(userId, uid, "PersonalBest", "", mode, "");
             UpdatePBMedal();
             sleep(100);
         }
@@ -230,6 +236,7 @@ class MapInfo_Data : MapInfo::Data {
         ThumbnailUrl = info.ThumbnailUrl;
         TimeStamp = info.TimeStamp;
         DateStr = FmtTimestamp(TimeStamp);
+        HasClones = info.HasClones;
 
         AuthorScore = info.AuthorScore;
         GoldScore = info.GoldScore;
@@ -258,6 +265,7 @@ class MapInfo_Data : MapInfo::Data {
         SetName(mi.Name);
         FileName = mi.FileName;
         FileUrl = mi.Path;
+        HasClones = mi.TMObjective_NbClones > 0;
 
         AuthorScore = mi.TMObjective_AuthorTime;
         GoldScore = mi.TMObjective_GoldTime;
@@ -1441,6 +1449,7 @@ class MapInfo_UI : MapInfo_Data {
                 DebugTableRowStr("CleanName", CleanName);
                 DebugTableRowStr("NvgName", NvgName.ToString());
                 DebugTableRowStr("MapComment", MapComment);
+                DebugTableRowBool("HasClones", HasClones);
 
                 DebugTableRowStr("AuthorAccountId", AuthorAccountId);
                 DebugTableRowStr("AuthorCurrentName", AuthorCurrentName);

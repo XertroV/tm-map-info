@@ -9,6 +9,7 @@ namespace MapInfo {
         string CleanName;
         string MapComment;
         bool HasMapComment;
+        bool HasClones;
 
         string AuthorAccountId = "";
         string AuthorCurrentName = "";
