@@ -1190,7 +1190,7 @@ class MapInfo_UI : MapInfo_Data {
         bool drawUsingImGUI = (bls !is null && bls.Enabled) || (sls !is null && sls.Enabled);
         if (!S_LoadingScreenUseNVG) drawUsingImGUI = true;
 
-        vec2 screen = vec2(Display::GetWidth(), Math::Max(1, Display::GetHeight()));
+        vec2 screen = vec2(Math::Max(100, Display::GetWidth()), Math::Max(100, Display::GetHeight()));
         float fs = (fontProp * screen.y);
         float yTop = screen.y * S_LoadingScreenYOffsetPct / 100.0;
         float gap = fs / 4.0;
