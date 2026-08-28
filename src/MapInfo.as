@@ -413,15 +413,20 @@ class MapInfo_Data : MapInfo::Data {
     }
 
     void UpdateNbPlayersString() {
-        // bug: 16000 shows as 6-16k
-        NbPlayersStr = NbPlayers > 10000 && NbPlayers % 1000 == 0 ? GetNbPlayersRange() : tostring(NbPlayers);
+        if (NbPlayers == 98765) {
+            NbPlayersStr = "?";
+        } else {
+            // bug: 16000 shows as 6-16k
+            NbPlayersStr = NbPlayers > 10000 && NbPlayers % 1000 == 0 ? GetNbPlayersRange() : tostring(NbPlayers);
+        }
+
         log_debug('Set NbPlayersStr to: ' + NbPlayersStr);
     }
 
     void RefreshMapInfoFromMapMonitorAPI() {
         if (isPlatform || isRoyal) {
             log_trace('Game mode doesn\'t support leaderboards. Skipping map monitor call...');
-            NbPlayers = 98765;
+            NbPlayers = 0;
             UpdateNbPlayersString();
             WorstTimeStr = FormatTime(WorstTime);
             return;
