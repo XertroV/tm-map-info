@@ -424,7 +424,7 @@ class MapInfo_Data : MapInfo::Data {
     }
 
     void RefreshMapInfoFromMapMonitorAPI() {
-        if (isPlatform || isRoyal) {
+        if (isRoyal) {
             log_trace('Game mode doesn\'t support leaderboards. Skipping map monitor call...');
             NbPlayers = 0;
             UpdateNbPlayersString();
